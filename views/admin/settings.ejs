@@ -1,0 +1,790 @@
+<%- include("../partials/head", { title: "Bula Admin - Settings", assetVersion }) %>
+
+<body>
+  <div class="app">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <%- include("../partials/sidebar", { activeMenu: "settings" }) %>
+
+    <div class="main">
+      <%- include("../partials/topbar", { admin }) %>
+
+      <div class="content">
+        <div class="page-title">
+          <h2>Business Settings</h2>
+          <div class="muted">Configure your business details, branding, and captive portal appearance</div>
+        </div>
+
+        <!-- Tabs Navigation -->
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="business">Business Info</button>
+          <button class="tab-btn" data-tab="branding">Branding</button>
+          <button class="tab-btn" data-tab="portal">Captive Portal</button>
+          <button class="tab-btn" data-tab="theme">Theme</button>
+          <button class="tab-btn" data-tab="support">Support</button>
+        </div>
+
+        <!-- Business Info Tab -->
+        <div class="tab-content active" id="tab-business">
+          <div class="card">
+            <div class="card-head">
+              <h3>Business Information</h3>
+            </div>
+            <form id="businessInfoForm" class="settings-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="business_name">Business Name</label>
+                  <input type="text" id="business_name" name="business_name" value="<%= settings.business_name || '' %>" placeholder="Your Business Name">
+                </div>
+                <div class="form-group">
+                  <label for="tagline">Tagline</label>
+                  <input type="text" id="tagline" name="tagline" value="<%= settings.tagline || '' %>" placeholder="Short description">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="address">Address</label>
+                <textarea id="address" name="address" rows="2" placeholder="Business address"><%= settings.address || '' %></textarea>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="phone">Phone Number</label>
+                  <input type="tel" id="phone" name="phone" value="<%= settings.phone || '' %>" placeholder="+256 xxx xxx xxx">
+                </div>
+                <div class="form-group">
+                  <label for="email">Email Address</label>
+                  <input type="email" id="email" name="email" value="<%= settings.email || '' %>" placeholder="contact@business.com">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="website">Website</label>
+                <input type="url" id="website" name="website" value="<%= settings.website || '' %>" placeholder="https://www.example.com">
+              </div>
+
+              <h4 class="form-section-title">Social Media Links</h4>
+              <div class="form-grid form-grid--3">
+                <div class="form-group">
+                  <label for="facebook_url">Facebook</label>
+                  <input type="url" id="facebook_url" name="facebook_url" value="<%= settings.facebook_url || '' %>" placeholder="https://facebook.com/...">
+                </div>
+                <div class="form-group">
+                  <label for="twitter_url">Twitter / X</label>
+                  <input type="url" id="twitter_url" name="twitter_url" value="<%= settings.twitter_url || '' %>" placeholder="https://twitter.com/...">
+                </div>
+                <div class="form-group">
+                  <label for="instagram_url">Instagram</label>
+                  <input type="url" id="instagram_url" name="instagram_url" value="<%= settings.instagram_url || '' %>" placeholder="https://instagram.com/...">
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn--primary">Save Business Info</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Branding Tab -->
+        <div class="tab-content" id="tab-branding">
+          <div class="card">
+            <div class="card-head">
+              <h3>Company Logo</h3>
+            </div>
+            <div class="upload-section">
+              <div class="upload-preview" id="logoPreview">
+                <% if (settings.logo_url) { %>
+                  <img src="<%= settings.logo_url %>" alt="Company Logo">
+                <% } else { %>
+                  <div class="upload-placeholder">
+                    <i data-lucide="image"></i>
+                    <span>No logo uploaded</span>
+                  </div>
+                <% } %>
+              </div>
+              <div class="upload-actions">
+                <input type="file" id="logoInput" accept="image/*" style="display: none;">
+                <button type="button" class="btn btn--primary" onclick="document.getElementById('logoInput').click()">
+                  <i data-lucide="upload"></i> Upload Logo
+                </button>
+                <% if (settings.logo_url) { %>
+                <button type="button" class="btn btn--danger" onclick="deleteImage('logo_url')">
+                  <i data-lucide="trash-2"></i> Remove
+                </button>
+                <% } %>
+              </div>
+              <p class="upload-help">Recommended: PNG or JPG, max 5MB. Square images work best.</p>
+            </div>
+          </div>
+
+          <div class="card mt-16">
+            <div class="card-head">
+              <h3>Favicon</h3>
+            </div>
+            <div class="upload-section">
+              <div class="upload-preview upload-preview--small" id="faviconPreview">
+                <% if (settings.favicon_url) { %>
+                  <img src="<%= settings.favicon_url %>" alt="Favicon">
+                <% } else { %>
+                  <div class="upload-placeholder">
+                    <i data-lucide="square"></i>
+                    <span>No favicon</span>
+                  </div>
+                <% } %>
+              </div>
+              <div class="upload-actions">
+                <input type="file" id="faviconInput" accept="image/*" style="display: none;">
+                <button type="button" class="btn btn--primary" onclick="document.getElementById('faviconInput').click()">
+                  <i data-lucide="upload"></i> Upload Favicon
+                </button>
+                <% if (settings.favicon_url) { %>
+                <button type="button" class="btn btn--danger" onclick="deleteImage('favicon_url')">
+                  <i data-lucide="trash-2"></i> Remove
+                </button>
+                <% } %>
+              </div>
+              <p class="upload-help">Recommended: 32x32 or 64x64 pixels, PNG format.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Captive Portal Tab -->
+        <div class="tab-content" id="tab-portal">
+          <div class="card">
+            <div class="card-head">
+              <h3>Portal Appearance</h3>
+            </div>
+            <form id="portalForm" class="settings-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="portal_title">Portal Title</label>
+                  <input type="text" id="portal_title" name="portal_title" value="<%= settings.portal_title || '' %>" placeholder="Welcome to WiFi">
+                </div>
+                <div class="form-group">
+                  <label for="portal_background_color">Background Color</label>
+                  <div class="color-input-wrapper">
+                    <input type="color" id="portal_background_color_picker" value="<%= settings.portal_background_color || '#f7f8fa' %>">
+                    <input type="text" id="portal_background_color" name="portal_background_color" value="<%= settings.portal_background_color || '#f7f8fa' %>" placeholder="#f7f8fa">
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="portal_welcome_text">Welcome Message</label>
+                <textarea id="portal_welcome_text" name="portal_welcome_text" rows="3" placeholder="Welcome message for the captive portal"><%= settings.portal_welcome_text || '' %></textarea>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn--primary">Save Portal Settings</button>
+                <a href="/portal" target="_blank" class="btn">
+                  <i data-lucide="external-link"></i> Preview Portal
+                </a>
+              </div>
+            </form>
+          </div>
+
+          <div class="card mt-16">
+            <div class="card-head">
+              <h3>Portal Background Image</h3>
+            </div>
+            <div class="upload-section">
+              <div class="upload-preview upload-preview--wide" id="backgroundPreview">
+                <% if (settings.portal_background_url) { %>
+                  <img src="<%= settings.portal_background_url %>" alt="Background">
+                <% } else { %>
+                  <div class="upload-placeholder">
+                    <i data-lucide="image"></i>
+                    <span>No background image</span>
+                  </div>
+                <% } %>
+              </div>
+              <div class="upload-actions">
+                <input type="file" id="backgroundInput" accept="image/*" style="display: none;">
+                <button type="button" class="btn btn--primary" onclick="document.getElementById('backgroundInput').click()">
+                  <i data-lucide="upload"></i> Upload Background
+                </button>
+                <% if (settings.portal_background_url) { %>
+                <button type="button" class="btn btn--danger" onclick="deleteImage('portal_background_url')">
+                  <i data-lucide="trash-2"></i> Remove
+                </button>
+                <% } %>
+              </div>
+              <p class="upload-help">Recommended: 1920x1080 or larger for best results.</p>
+            </div>
+          </div>
+
+          <div class="card mt-16">
+            <div class="card-head">
+              <h3>Terms & Privacy</h3>
+            </div>
+            <form id="termsForm" class="settings-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="terms_url">Terms of Service URL</label>
+                  <input type="url" id="terms_url" name="terms_url" value="<%= settings.terms_url || '' %>" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                  <label for="privacy_url">Privacy Policy URL</label>
+                  <input type="url" id="privacy_url" name="privacy_url" value="<%= settings.privacy_url || '' %>" placeholder="https://...">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="terms_text">Terms Text (displayed on portal)</label>
+                <textarea id="terms_text" name="terms_text" rows="4" placeholder="By connecting, you agree to our terms..."><%= settings.terms_text || '' %></textarea>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn--primary">Save Terms Settings</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Theme Tab -->
+        <div class="tab-content" id="tab-theme">
+          <div class="card">
+            <div class="card-head">
+              <h3>Color Scheme</h3>
+            </div>
+            <form id="themeForm" class="settings-form">
+              <div class="form-grid form-grid--3">
+                <div class="form-group">
+                  <label for="primary_color">Primary Color</label>
+                  <div class="color-input-wrapper">
+                    <input type="color" id="primary_color_picker" value="<%= settings.primary_color || '#0ea56b' %>">
+                    <input type="text" id="primary_color" name="primary_color" value="<%= settings.primary_color || '#0ea56b' %>" placeholder="#0ea56b">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="primary_light">Primary Light</label>
+                  <div class="color-input-wrapper">
+                    <input type="color" id="primary_light_picker" value="<%= settings.primary_light || '#e6f6ef' %>">
+                    <input type="text" id="primary_light" name="primary_light" value="<%= settings.primary_light || '#e6f6ef' %>" placeholder="#e6f6ef">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="primary_dark">Primary Dark</label>
+                  <div class="color-input-wrapper">
+                    <input type="color" id="primary_dark_picker" value="<%= settings.primary_dark || '#0b8a59' %>">
+                    <input type="text" id="primary_dark" name="primary_dark" value="<%= settings.primary_dark || '#0b8a59' %>" placeholder="#0b8a59">
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="theme_mode">Theme Mode</label>
+                <select id="theme_mode" name="theme_mode">
+                  <option value="light" <%= settings.theme_mode === 'light' ? 'selected' : '' %>>Light Mode</option>
+                  <option value="dark" <%= settings.theme_mode === 'dark' ? 'selected' : '' %>>Dark Mode</option>
+                  <option value="auto" <%= settings.theme_mode === 'auto' ? 'selected' : '' %>>Auto (System Preference)</option>
+                </select>
+              </div>
+
+              <div class="color-preview">
+                <h4>Preview</h4>
+                <div class="preview-box" id="themePreview">
+                  <div class="preview-header" style="background: <%= settings.primary_color || '#0ea56b' %>">
+                    <span style="color: white; font-weight: 600;"><%= settings.business_name || 'Your Business' %></span>
+                  </div>
+                  <div class="preview-content">
+                    <button class="preview-btn" style="background: <%= settings.primary_color || '#0ea56b' %>; color: white;">Primary Button</button>
+                    <button class="preview-btn" style="background: <%= settings.primary_light || '#e6f6ef' %>; color: <%= settings.primary_color || '#0ea56b' %>;">Secondary Button</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn--primary">Save Theme</button>
+                <button type="button" class="btn" onclick="resetThemeColors()">Reset to Defaults</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Support Tab -->
+        <div class="tab-content" id="tab-support">
+          <div class="card">
+            <div class="card-head">
+              <h3>Customer Support Information</h3>
+            </div>
+            <form id="supportForm" class="settings-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="support_phone">Support Phone</label>
+                  <input type="tel" id="support_phone" name="support_phone" value="<%= settings.support_phone || '' %>" placeholder="+256 xxx xxx xxx">
+                </div>
+                <div class="form-group">
+                  <label for="support_email">Support Email</label>
+                  <input type="email" id="support_email" name="support_email" value="<%= settings.support_email || '' %>" placeholder="support@business.com">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="support_hours">Support Hours</label>
+                <input type="text" id="support_hours" name="support_hours" value="<%= settings.support_hours || '' %>" placeholder="e.g., Mon-Fri 9am-5pm EAT">
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn--primary">Save Support Info</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      padding: 10px 20px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn:hover {
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .settings-form {
+      max-width: 800px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .form-grid--3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group input[type="tel"],
+    .form-group input[type="url"],
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9375rem;
+      color: var(--text);
+      background: var(--white);
+      transition: border-color 0.15s ease;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+    }
+
+    .form-section-title {
+      margin: 24px 0 16px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .upload-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .upload-preview {
+      width: 200px;
+      height: 200px;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    .upload-preview--small {
+      width: 100px;
+      height: 100px;
+    }
+
+    .upload-preview--wide {
+      width: 100%;
+      max-width: 600px;
+      height: 300px;
+    }
+
+    .upload-preview img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .upload-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+    }
+
+    .upload-placeholder svg {
+      width: 48px;
+      height: 48px;
+    }
+
+    .upload-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .upload-help {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+    }
+
+    .color-input-wrapper {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .color-input-wrapper input[type="color"] {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      background: none;
+    }
+
+    .color-input-wrapper input[type="text"] {
+      flex: 1;
+    }
+
+    .color-preview {
+      margin-top: 24px;
+    }
+
+    .color-preview h4 {
+      margin-bottom: 12px;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    .preview-box {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      max-width: 400px;
+    }
+
+    .preview-header {
+      padding: 16px;
+    }
+
+    .preview-content {
+      padding: 20px;
+      display: flex;
+      gap: 12px;
+      background: var(--white);
+    }
+
+    .preview-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .btn--danger {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+
+    .btn--danger:hover {
+      background: #fecaca;
+    }
+
+    @media (max-width: 768px) {
+      .form-grid,
+      .form-grid--3 {
+        grid-template-columns: 1fr;
+      }
+
+      .upload-preview--wide {
+        height: 200px;
+      }
+    }
+  </style>
+
+  <script src="/js/app.js?v=<%= assetVersion || '' %>"></script>
+  <script>
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Color picker sync
+    document.querySelectorAll('input[type="color"]').forEach(picker => {
+      const textId = picker.id.replace('_picker', '');
+      const textInput = document.getElementById(textId);
+      if (textInput) {
+        picker.addEventListener('input', () => {
+          textInput.value = picker.value;
+          updateThemePreview();
+        });
+        textInput.addEventListener('input', () => {
+          if (/^#[0-9A-Fa-f]{6}$/.test(textInput.value)) {
+            picker.value = textInput.value;
+            updateThemePreview();
+          }
+        });
+      }
+    });
+
+    function updateThemePreview() {
+      const primary = document.getElementById('primary_color').value;
+      const primaryLight = document.getElementById('primary_light').value;
+      const header = document.querySelector('.preview-header');
+      const btns = document.querySelectorAll('.preview-btn');
+      if (header && primary) {
+        header.style.background = primary;
+      }
+      if (btns[0] && primary) {
+        btns[0].style.background = primary;
+      }
+      if (btns[1] && primaryLight && primary) {
+        btns[1].style.background = primaryLight;
+        btns[1].style.color = primary;
+      }
+    }
+
+    function resetThemeColors() {
+      document.getElementById('primary_color').value = '#0ea56b';
+      document.getElementById('primary_color_picker').value = '#0ea56b';
+      document.getElementById('primary_light').value = '#e6f6ef';
+      document.getElementById('primary_light_picker').value = '#e6f6ef';
+      document.getElementById('primary_dark').value = '#0b8a59';
+      document.getElementById('primary_dark_picker').value = '#0b8a59';
+      updateThemePreview();
+    }
+
+    // Form submissions
+    async function submitForm(formId, excludeFields = []) {
+      const form = document.getElementById(formId);
+      const formData = new FormData(form);
+      const data = {};
+      for (const [key, value] of formData.entries()) {
+        if (!excludeFields.includes(key)) {
+          data[key] = value;
+        }
+      }
+
+      try {
+        const response = await fetch('/admin/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if (result.ok) {
+          showToast('Settings saved successfully');
+        } else {
+          showToast(result.message || 'Failed to save settings', 'error');
+        }
+      } catch (e) {
+        showToast('Error saving settings', 'error');
+      }
+    }
+
+    document.getElementById('businessInfoForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      submitForm('businessInfoForm');
+    });
+
+    document.getElementById('portalForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      submitForm('portalForm');
+    });
+
+    document.getElementById('termsForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      submitForm('termsForm');
+    });
+
+    document.getElementById('themeForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      submitForm('themeForm');
+    });
+
+    document.getElementById('supportForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      submitForm('supportForm');
+    });
+
+    // Image uploads
+    async function uploadImage(field, file) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const response = await fetch(`/admin/api/settings/upload/${field}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: e.target.result })
+          });
+          const result = await response.json();
+          if (result.ok) {
+            showToast('Image uploaded successfully');
+            location.reload();
+          } else {
+            showToast(result.message || 'Upload failed', 'error');
+          }
+        } catch (err) {
+          showToast('Error uploading image', 'error');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    document.getElementById('logoInput').addEventListener('change', (e) => {
+      if (e.target.files[0]) uploadImage('logo_url', e.target.files[0]);
+    });
+
+    document.getElementById('faviconInput').addEventListener('change', (e) => {
+      if (e.target.files[0]) uploadImage('favicon_url', e.target.files[0]);
+    });
+
+    document.getElementById('backgroundInput').addEventListener('change', (e) => {
+      if (e.target.files[0]) uploadImage('portal_background_url', e.target.files[0]);
+    });
+
+    async function deleteImage(field) {
+      if (!confirm('Are you sure you want to delete this image?')) return;
+
+      try {
+        const response = await fetch(`/admin/api/settings/upload/${field}`, {
+          method: 'DELETE'
+        });
+        const result = await response.json();
+        if (result.ok) {
+          showToast('Image deleted');
+          location.reload();
+        } else {
+          showToast(result.message || 'Delete failed', 'error');
+        }
+      } catch (e) {
+        showToast('Error deleting image', 'error');
+      }
+    }
+
+    // Toast notifications
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = 'toast toast--' + type;
+      toast.textContent = message;
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background: ${type === 'error' ? '#991b1b' : '#0ea56b'};
+        color: white;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+      `;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Add animation styles
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>

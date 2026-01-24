@@ -1,0 +1,112 @@
+<%- include("../partials/head", { title: "Admin Dashboard", assetVersion }) %>
+
+<body>
+  <div class="app">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <%- include("../partials/sidebar", { activeMenu: "dashboard" }) %>
+
+    <div class="main">
+      <%- include("../partials/topbar", { admin }) %>
+
+      <div class="content">
+        <% const c = (typeof counts !== "undefined" && counts) ? counts : {}; %>
+        <% const ro = (typeof recentOrders !== "undefined" && Array.isArray(recentOrders)) ? recentOrders : []; %>
+
+        <div class="page-title">
+          <h2>Dashboard</h2>
+          <div class="muted">Welcome back, <%= admin?.name || admin?.email || "Admin" %></div>
+        </div>
+
+        <div class="grid grid--4">
+          <div class="card card--stat">
+            <div class="card-title">Orders</div>
+            <div class="card-value"><%= c.orders || 0 %></div>
+            <div class="card-sub">Total orders</div>
+          </div>
+
+          <div class="card card--stat">
+            <div class="card-title">Paid</div>
+            <div class="card-value"><%= c.paid || 0 %></div>
+            <div class="card-sub">Completed payments</div>
+          </div>
+
+          <div class="card card--stat">
+            <div class="card-title">Active Vouchers</div>
+            <div class="card-value"><%= c.vouchers || 0 %></div>
+            <div class="card-sub">Issued vouchers</div>
+          </div>
+
+          <div class="card card--stat">
+            <div class="card-title">Plans</div>
+            <div class="card-value"><%= c.plans || 0 %></div>
+            <div class="card-sub">Available plans</div>
+          </div>
+        </div>
+
+        <div class="card mt-16">
+          <div class="card-head">
+            <h3>Recent Orders</h3>
+            <div class="card-actions">
+              <a class="btn btn--primary" href="/admin/orders">View All Orders</a>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Order Ref</th>
+                  <th>Status</th>
+                  <th>Amount</th>
+                  <th>Paid At</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% ro.forEach(o => { %>
+                  <tr>
+                    <td><%= o.order_ref %></td>
+                    <td><span class="badge <%= (o.status||'').toLowerCase() %>"><%= o.status %></span></td>
+                    <td><%= o.amount_ugx ? o.amount_ugx.toLocaleString() : '0' %> UGX</td>
+                    <td><%= o.paid_at ? new Date(o.paid_at).toLocaleDateString() : "-" %></td>
+                  </tr>
+                <% }) %>
+
+                <% if (ro.length === 0) { %>
+                  <tr><td colspan="4" class="muted text-center">No recent orders</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card mt-16">
+          <div class="card-head">
+            <h3>Quick Actions</h3>
+          </div>
+          <div class="btn-row">
+            <a class="btn" href="/admin/orders">
+              <i data-lucide="shopping-cart"></i>
+              View Orders
+            </a>
+            <a class="btn" href="/admin/plans">
+              <i data-lucide="package"></i>
+              Manage Plans
+            </a>
+            <a class="btn" href="/admin/vouchers">
+              <i data-lucide="ticket"></i>
+              Manage Vouchers
+            </a>
+            <a class="btn" href="/admin/settings">
+              <i data-lucide="settings"></i>
+              Settings
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js?v=<%= assetVersion || '' %>"></script>
+</body>
+</html>

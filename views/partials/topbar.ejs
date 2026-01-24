@@ -1,0 +1,17 @@
+<header class="topbar">
+  <button class="iconbtn" id="sidebarToggle">
+    <i data-lucide="panel-left"></i>
+  </button>
+
+  <div class="topbar__spacer"></div>
+
+  <div class="topbar__right">
+    <div class="userpill">
+      <div class="userpill__avatar"><i data-lucide="user"></i></div>
+      <div>
+        <div class="userpill__email"><%= ((typeof admin!="undefined" && admin)?admin:(typeof user!="undefined" && user)?user:null)?.email || "admin@bula.prosystemsug.com" %></div>
+        <div class="userpill__role"><%= ((typeof admin!="undefined" && admin)?admin:(typeof user!="undefined" && user)?user:null)?.role || "SUPER_ADMIN" %></div>
+      </div>
+    </div>
+  </div>
+</header>

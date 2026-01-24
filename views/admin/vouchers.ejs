@@ -1,0 +1,751 @@
+<%- include("../partials/head", { title: "Bula Admin - Vouchers", assetVersion }) %>
+
+<body>
+  <div class="app">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <%- include("../partials/sidebar", { activeMenu: "vouchers" }) %>
+
+    <div class="main">
+      <%- include("../partials/topbar", { admin }) %>
+
+      <div class="content">
+        <div class="page-title">
+          <h2>Vouchers</h2>
+          <div class="muted">Generate, list, and manage WiFi vouchers</div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid--4" id="statsGrid">
+          <div class="card card--stat">
+            <div class="card-title">Total</div>
+            <div class="card-value" id="statTotal">-</div>
+            <div class="card-sub">All vouchers</div>
+          </div>
+          <div class="card card--stat">
+            <div class="card-title">Active</div>
+            <div class="card-value" id="statActive">-</div>
+            <div class="card-sub">Ready to use</div>
+          </div>
+          <div class="card card--stat">
+            <div class="card-title">Used</div>
+            <div class="card-value" id="statUsed">-</div>
+            <div class="card-sub">Redeemed</div>
+          </div>
+          <div class="card card--stat">
+            <div class="card-title">Disabled</div>
+            <div class="card-value" id="statDisabled">-</div>
+            <div class="card-sub">Deactivated</div>
+          </div>
+        </div>
+
+        <!-- Actions Bar -->
+        <div class="card mt-16">
+          <div class="card-head">
+            <h3>Manage Vouchers</h3>
+            <div class="card-actions">
+              <button class="btn" onclick="exportCSV()">
+                <i data-lucide="download"></i>
+                Export CSV
+              </button>
+              <button type="button" class="btn btn--primary" onclick="openGenerateModal()">
+                <i data-lucide="plus"></i>
+                Generate Vouchers
+              </button>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="filters">
+            <div class="filter-group">
+              <label class="filter-label">Status</label>
+              <select id="filterStatus" class="filter-select" onchange="loadVouchers()">
+                <option value="">All Status</option>
+                <option value="ACTIVE">Active</option>
+                <option value="USED">Used</option>
+                <option value="DISABLED">Disabled</option>
+                <option value="EXPIRED">Expired</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label class="filter-label">Plan</label>
+              <select id="filterPlan" class="filter-select" onchange="loadVouchers()">
+                <option value="">All Plans</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <button class="btn btn--sm" onclick="loadVouchers()">
+                <i data-lucide="refresh-cw"></i>
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          <!-- Vouchers Table -->
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                  <th>Voucher Code</th>
+                  <th>Plan</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Expires</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="vouchersTable">
+                <tr><td colspan="7" class="muted text-center">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination" id="pagination"></div>
+
+          <!-- Bulk Actions -->
+          <div class="bulk-actions" id="bulkActions" style="display: none;">
+            <span id="selectedCount">0 selected</span>
+            <button class="btn btn--sm" onclick="bulkDelete()">
+              <i data-lucide="trash-2"></i>
+              Delete Selected
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate Modal -->
+  <div class="modal-overlay" id="generateModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Generate Vouchers</h3>
+        <button class="modal-close" onclick="closeGenerateModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Plan *</label>
+          <select id="genPlan" class="form-input">
+            <option value="">Select a plan</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quantity (1-100)</label>
+          <input type="number" id="genCount" class="form-input" value="10" min="1" max="100">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Expires in (days)</label>
+          <input type="number" id="genExpires" class="form-input" placeholder="Leave empty for no expiration" min="1">
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="genActivateRadius">
+            <span>Activate in RADIUS immediately</span>
+          </label>
+          <div class="form-hint">Enable this if you want vouchers ready for immediate use</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeGenerateModal()">Cancel</button>
+        <button class="btn btn--primary" onclick="generateVouchers()" id="genBtn">
+          <i data-lucide="zap"></i>
+          Generate
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generated Vouchers Modal -->
+  <div class="modal-overlay" id="generatedModal">
+    <div class="modal modal--lg">
+      <div class="modal-header">
+        <h3>Generated Vouchers</h3>
+        <button class="modal-close" onclick="closeGeneratedModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="generated-actions">
+          <button class="btn btn--sm" onclick="printVouchers()">
+            <i data-lucide="printer"></i>
+            Print Vouchers
+          </button>
+          <button class="btn btn--sm" onclick="copyVouchers()">
+            <i data-lucide="copy"></i>
+            Copy to Clipboard
+          </button>
+        </div>
+        <div class="voucher-cards" id="generatedVouchers"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn--primary" onclick="closeGeneratedModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .filter-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    .filter-select {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      min-width: 150px;
+    }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px 0;
+    }
+    .pagination button {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+    .pagination button.active {
+      background: var(--primary);
+      color: var(--white);
+      border-color: var(--primary);
+    }
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .bulk-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 16px;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      margin-top: 16px;
+    }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal {
+      background: var(--white);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal--lg {
+      max-width: 700px;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-header h3 {
+      margin: 0;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--text-muted);
+    }
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9375rem;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .checkbox-label input {
+      width: 18px;
+      height: 18px;
+    }
+    .generated-actions {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .voucher-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .voucher-card {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      text-align: center;
+      background: #fafbfc;
+    }
+    .voucher-card__plan {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .voucher-card__code {
+      font-family: monospace;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 2px;
+    }
+    .action-btn {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.8125rem;
+    }
+    .action-btn:hover {
+      background: var(--bg);
+    }
+    .action-btn--danger {
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+    .action-btn--danger:hover {
+      background: #fee2e2;
+    }
+    @media print {
+      body * { visibility: hidden; }
+      .voucher-cards, .voucher-cards * { visibility: visible; }
+      .voucher-cards {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+      .voucher-card {
+        break-inside: avoid;
+        border: 1px solid #000;
+      }
+    }
+    @media (max-width: 768px) {
+      .filters {
+        flex-direction: column;
+      }
+      .filter-select {
+        width: 100%;
+      }
+      .modal {
+        margin: 10px;
+      }
+    }
+  </style>
+
+  <script src="/js/app.js?v=<%= assetVersion || '' %>"></script>
+  <script>
+    let currentPage = 1;
+    let plans = [];
+    let selectedVouchers = new Set();
+    let lastGeneratedVouchers = [];
+
+    // Load plans for dropdowns
+    async function loadPlans() {
+      try {
+        const res = await fetch('/admin/api/plans', { credentials: 'same-origin' });
+        const data = await res.json();
+        if (data.ok) {
+          plans = data.plans;
+          const filterPlan = document.getElementById('filterPlan');
+          const genPlan = document.getElementById('genPlan');
+
+          plans.forEach(p => {
+            filterPlan.innerHTML += `<option value="${p.id}">${p.name} - ${p.price_ugx.toLocaleString()} UGX</option>`;
+            genPlan.innerHTML += `<option value="${p.id}">${p.name} - ${p.price_ugx.toLocaleString()} UGX</option>`;
+          });
+        }
+      } catch (e) {
+        console.error('Failed to load plans:', e);
+      }
+    }
+
+    // Load vouchers
+    async function loadVouchers(page = 1) {
+      currentPage = page;
+      const status = document.getElementById('filterStatus').value;
+      const planId = document.getElementById('filterPlan').value;
+
+      let url = `/admin/api/vouchers?page=${page}&limit=50`;
+      if (status) url += `&status=${status}`;
+      if (planId) url += `&plan_id=${planId}`;
+
+      try {
+        const res = await fetch(url, { credentials: 'same-origin' });
+        const data = await res.json();
+
+        if (data.ok) {
+          renderVouchers(data.vouchers);
+          renderPagination(data.pagination);
+          updateStats(data);
+        }
+      } catch (e) {
+        console.error('Failed to load vouchers:', e);
+        document.getElementById('vouchersTable').innerHTML =
+          '<tr><td colspan="8" class="muted text-center">Failed to load vouchers</td></tr>';
+      }
+    }
+
+    // Update stats
+    async function updateStats() {
+      try {
+        // Fetch all stats
+        const [total, active, used, disabled] = await Promise.all([
+          fetch('/admin/api/vouchers?limit=1', { credentials: 'same-origin' }).then(r => r.json()),
+          fetch('/admin/api/vouchers?limit=1&status=ACTIVE', { credentials: 'same-origin' }).then(r => r.json()),
+          fetch('/admin/api/vouchers?limit=1&status=USED', { credentials: 'same-origin' }).then(r => r.json()),
+          fetch('/admin/api/vouchers?limit=1&status=DISABLED', { credentials: 'same-origin' }).then(r => r.json())
+        ]);
+
+        document.getElementById('statTotal').textContent = total.pagination?.total || 0;
+        document.getElementById('statActive').textContent = active.pagination?.total || 0;
+        document.getElementById('statUsed').textContent = used.pagination?.total || 0;
+        document.getElementById('statDisabled').textContent = disabled.pagination?.total || 0;
+      } catch (e) {
+        console.error('Failed to update stats:', e);
+      }
+    }
+
+    // Render vouchers table
+    function renderVouchers(vouchers) {
+      const tbody = document.getElementById('vouchersTable');
+
+      if (!vouchers.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="muted text-center">No vouchers found</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = vouchers.map(v => `
+        <tr>
+          <td><input type="checkbox" class="voucher-cb" data-id="${v.id}" onchange="updateSelection()"></td>
+          <td><code>${v.code}</code></td>
+          <td>${v.plan_name || '-'}</td>
+          <td><span class="badge ${v.status.toLowerCase()}">${v.status}</span></td>
+          <td>${v.created_at ? new Date(v.created_at).toLocaleDateString() : '-'}</td>
+          <td>${v.expires_at ? new Date(v.expires_at).toLocaleDateString() : 'Never'}</td>
+          <td>
+            ${v.status === 'ACTIVE' ? `
+              <button class="action-btn" onclick="toggleStatus(${v.id}, 'DISABLED')" title="Disable">
+                <i data-lucide="ban"></i>
+              </button>
+            ` : v.status === 'DISABLED' ? `
+              <button class="action-btn" onclick="toggleStatus(${v.id}, 'ACTIVE')" title="Enable">
+                <i data-lucide="check-circle"></i>
+              </button>
+            ` : ''}
+            ${v.status !== 'USED' ? `
+              <button class="action-btn action-btn--danger" onclick="deleteVoucher(${v.id})" title="Delete">
+                <i data-lucide="trash-2"></i>
+              </button>
+            ` : ''}
+          </td>
+        </tr>
+      `).join('');
+
+      // Reinitialize lucide icons
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Render pagination
+    function renderPagination(pagination) {
+      const container = document.getElementById('pagination');
+      if (pagination.pages <= 1) {
+        container.innerHTML = '';
+        return;
+      }
+
+      let html = '';
+      html += `<button onclick="loadVouchers(${pagination.page - 1})" ${pagination.page === 1 ? 'disabled' : ''}>Prev</button>`;
+
+      for (let i = 1; i <= pagination.pages; i++) {
+        if (i === 1 || i === pagination.pages || (i >= pagination.page - 2 && i <= pagination.page + 2)) {
+          html += `<button onclick="loadVouchers(${i})" class="${i === pagination.page ? 'active' : ''}">${i}</button>`;
+        } else if (i === pagination.page - 3 || i === pagination.page + 3) {
+          html += '<span>...</span>';
+        }
+      }
+
+      html += `<button onclick="loadVouchers(${pagination.page + 1})" ${pagination.page === pagination.pages ? 'disabled' : ''}>Next</button>`;
+      container.innerHTML = html;
+    }
+
+    // Toggle select all
+    function toggleSelectAll() {
+      const checked = document.getElementById('selectAll').checked;
+      document.querySelectorAll('.voucher-cb').forEach(cb => {
+        cb.checked = checked;
+      });
+      updateSelection();
+    }
+
+    // Update selection state
+    function updateSelection() {
+      selectedVouchers.clear();
+      document.querySelectorAll('.voucher-cb:checked').forEach(cb => {
+        selectedVouchers.add(parseInt(cb.dataset.id));
+      });
+
+      const bulkActions = document.getElementById('bulkActions');
+      const selectedCount = document.getElementById('selectedCount');
+
+      if (selectedVouchers.size > 0) {
+        bulkActions.style.display = 'flex';
+        selectedCount.textContent = `${selectedVouchers.size} selected`;
+      } else {
+        bulkActions.style.display = 'none';
+      }
+    }
+
+    // Toggle voucher status
+    async function toggleStatus(id, status) {
+      try {
+        const res = await fetch(`/admin/api/vouchers/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ status })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          loadVouchers(currentPage);
+          updateStats();
+        } else {
+          alert(data.message || 'Failed to update voucher');
+        }
+      } catch (e) {
+        alert('Failed to update voucher');
+      }
+    }
+
+    // Delete voucher
+    async function deleteVoucher(id) {
+      if (!confirm('Are you sure you want to delete this voucher?')) return;
+
+      try {
+        const res = await fetch(`/admin/api/vouchers/${id}`, { method: 'DELETE', credentials: 'same-origin' });
+        const data = await res.json();
+        if (data.ok) {
+          loadVouchers(currentPage);
+          updateStats();
+        } else {
+          alert(data.message || 'Failed to delete voucher');
+        }
+      } catch (e) {
+        alert('Failed to delete voucher');
+      }
+    }
+
+    // Bulk delete
+    async function bulkDelete() {
+      if (!confirm(`Are you sure you want to delete ${selectedVouchers.size} voucher(s)?`)) return;
+
+      try {
+        const res = await fetch('/admin/api/vouchers/bulk-delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ ids: Array.from(selectedVouchers) })
+        });
+        const data = await res.json();
+        alert(data.message);
+        selectedVouchers.clear();
+        document.getElementById('selectAll').checked = false;
+        loadVouchers(currentPage);
+        updateStats();
+      } catch (e) {
+        alert('Failed to delete vouchers');
+      }
+    }
+
+    // Export CSV
+    function exportCSV() {
+      const status = document.getElementById('filterStatus').value;
+      const planId = document.getElementById('filterPlan').value;
+
+      let url = '/admin/api/vouchers/export/csv?';
+      if (status) url += `status=${status}&`;
+      if (planId) url += `plan_id=${planId}`;
+
+      window.location.href = url;
+    }
+
+    // Modal functions
+    function openGenerateModal() {
+      console.log('openGenerateModal() called');
+      document.getElementById('generateModal').classList.add('active');
+    }
+
+    function closeGenerateModal() {
+      document.getElementById('generateModal').classList.remove('active');
+    }
+
+    function closeGeneratedModal() {
+      document.getElementById('generatedModal').classList.remove('active');
+      loadVouchers(1);
+      updateStats();
+    }
+
+    // Generate vouchers
+    async function generateVouchers() {
+      const planId = document.getElementById('genPlan').value;
+      const count = document.getElementById('genCount').value;
+      const expiresDays = document.getElementById('genExpires').value;
+      const activateRadius = document.getElementById('genActivateRadius').checked;
+
+      if (!planId) {
+        alert('Please select a plan');
+        return;
+      }
+
+      const btn = document.getElementById('genBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader"></i> Generating...';
+
+      try {
+        const res = await fetch('/admin/api/vouchers/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            plan_id: parseInt(planId),
+            count: parseInt(count) || 10,
+            expires_days: expiresDays ? parseInt(expiresDays) : null,
+            activate_radius: activateRadius
+          })
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+          lastGeneratedVouchers = data.vouchers;
+          closeGenerateModal();
+          showGeneratedVouchers(data.vouchers);
+        } else {
+          alert(data.message || 'Failed to generate vouchers');
+        }
+      } catch (e) {
+        alert('Failed to generate vouchers');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="zap"></i> Generate';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+    }
+
+    // Show generated vouchers
+    function showGeneratedVouchers(vouchers) {
+      const container = document.getElementById('generatedVouchers');
+      container.innerHTML = vouchers.map(v => `
+        <div class="voucher-card">
+          <div class="voucher-card__plan">${v.plan_name} - ${v.price_ugx.toLocaleString()} UGX</div>
+          <div class="voucher-card__code">${v.code}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('generatedModal').classList.add('active');
+    }
+
+    // Print vouchers
+    function printVouchers() {
+      window.print();
+    }
+
+    // Copy vouchers to clipboard
+    function copyVouchers() {
+      const text = lastGeneratedVouchers.map(v =>
+        `${v.plan_name}\nVoucher Code: ${v.code}\n`
+      ).join('\n---\n');
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Vouchers copied to clipboard!');
+      }).catch(() => {
+        alert('Failed to copy to clipboard');
+      });
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadPlans();
+      loadVouchers();
+      updateStats();
+    });
+  </script>
+</body>
+</html>

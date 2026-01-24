@@ -1,0 +1,553 @@
+<%- include("../partials/head", { title: "Bula Admin - Plans", assetVersion }) %>
+
+<body>
+  <div class="app">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <%- include("../partials/sidebar", { activeMenu: "plans" }) %>
+
+    <div class="main">
+      <%- include("../partials/topbar", { admin }) %>
+
+      <div class="content">
+        <div class="page-title">
+          <h2>Plans</h2>
+          <div class="muted">Create and manage WiFi hotspot plans</div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid--3" id="statsGrid">
+          <div class="card card--stat">
+            <div class="card-title">Total Plans</div>
+            <div class="card-value" id="statTotal">-</div>
+            <div class="card-sub">All plans</div>
+          </div>
+          <div class="card card--stat">
+            <div class="card-title">Active</div>
+            <div class="card-value" id="statActive">-</div>
+            <div class="card-sub">Available for purchase</div>
+          </div>
+          <div class="card card--stat">
+            <div class="card-title">Inactive</div>
+            <div class="card-value" id="statInactive">-</div>
+            <div class="card-sub">Hidden from portal</div>
+          </div>
+        </div>
+
+        <!-- Plans List -->
+        <div class="card mt-16">
+          <div class="card-head">
+            <h3>Hotspot Plans</h3>
+            <div class="card-actions">
+              <button type="button" class="btn btn--primary" onclick="openPlanModal()">
+                <i data-lucide="plus"></i>
+                Add Plan
+              </button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Name</th>
+                  <th>Price</th>
+                  <th>Duration</th>
+                  <th>Speed</th>
+                  <th>Data Limit</th>
+                  <th>Status</th>
+                  <th>Usage</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="plansTable">
+                <tr><td colspan="9" class="muted text-center">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plan Modal (Add/Edit) -->
+  <div class="modal-overlay" id="planModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add Plan</h3>
+        <button class="modal-close" onclick="closePlanModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="planId">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Plan Code *</label>
+            <input type="text" id="planCode" class="form-input" placeholder="e.g., 1H, 1D, 7D" maxlength="50">
+            <div class="form-hint">Unique identifier (will be uppercase)</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Plan Name *</label>
+            <input type="text" id="planName" class="form-input" placeholder="e.g., 1 Hour, 1 Day" maxlength="100">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Price (UGX) *</label>
+            <input type="number" id="planPrice" class="form-input" placeholder="e.g., 1000" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Duration (minutes) *</label>
+            <input type="number" id="planDuration" class="form-input" placeholder="e.g., 60" min="1">
+            <div class="form-hint" id="durationHint"></div>
+          </div>
+        </div>
+
+        <div class="form-divider">
+          <span>Speed Limits (Optional)</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Download Speed (kbps)</label>
+            <input type="number" id="planSpeedDown" class="form-input" placeholder="e.g., 2048" min="0">
+            <div class="form-hint" id="speedDownHint"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Upload Speed (kbps)</label>
+            <input type="number" id="planSpeedUp" class="form-input" placeholder="e.g., 1024" min="0">
+            <div class="form-hint" id="speedUpHint"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Data Limit (MB)</label>
+          <input type="number" id="planDataMb" class="form-input" placeholder="Leave empty for unlimited" min="0">
+          <div class="form-hint">Optional data cap in megabytes</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closePlanModal()">Cancel</button>
+        <button class="btn btn--primary" onclick="savePlan()" id="saveBtn">
+          <i data-lucide="save"></i>
+          Save Plan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9375rem;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .form-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+    }
+    .form-divider::before,
+    .form-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal {
+      background: var(--white);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 560px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-header h3 {
+      margin: 0;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--text-muted);
+    }
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .action-btn {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.8125rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .action-btn:hover {
+      background: var(--bg);
+    }
+    .action-btn--danger {
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+    .action-btn--danger:hover {
+      background: #fee2e2;
+    }
+    .action-btn--success {
+      color: #16a34a;
+      border-color: #bbf7d0;
+    }
+    .action-btn--success:hover {
+      background: #dcfce7;
+    }
+    .plan-speed {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+    }
+    .plan-usage {
+      font-size: 0.8125rem;
+    }
+    .plan-usage span {
+      display: block;
+    }
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      .modal {
+        margin: 10px;
+        max-width: none;
+      }
+    }
+  </style>
+
+  <script src="/js/app.js?v=<%= assetVersion || '' %>"></script>
+  <script>
+    console.log('Plans page script started');
+    let plans = [];
+    let editingPlanId = null;
+
+    // Format duration to human readable
+    function formatDuration(minutes) {
+      if (minutes < 60) return `${minutes} min`;
+      if (minutes < 1440) return `${Math.round(minutes / 60)} hour${minutes >= 120 ? 's' : ''}`;
+      return `${Math.round(minutes / 1440)} day${minutes >= 2880 ? 's' : ''}`;
+    }
+
+    // Format speed to human readable
+    function formatSpeed(kbps) {
+      if (!kbps) return '-';
+      if (kbps >= 1024) return `${(kbps / 1024).toFixed(1)} Mbps`;
+      return `${kbps} kbps`;
+    }
+
+    // Format data to human readable
+    function formatData(mb) {
+      if (!mb) return 'Unlimited';
+      if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
+      return `${mb} MB`;
+    }
+
+    // Load plans
+    async function loadPlans() {
+      console.log('loadPlans() called');
+      try {
+        console.log('Fetching /admin/api/plans/all...');
+        const res = await fetch('/admin/api/plans/all', { credentials: 'same-origin' });
+        console.log('Response status:', res.status);
+        const data = await res.json();
+        console.log('Response data:', data);
+
+        if (data.ok) {
+          plans = data.plans;
+          renderPlans(plans);
+          updateStats(plans);
+        }
+      } catch (e) {
+        console.error('Failed to load plans:', e);
+        document.getElementById('plansTable').innerHTML =
+          '<tr><td colspan="9" class="muted text-center">Failed to load plans</td></tr>';
+      }
+    }
+
+    // Update stats
+    function updateStats(plans) {
+      const total = plans.length;
+      const active = plans.filter(p => p.is_active).length;
+      const inactive = total - active;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statActive').textContent = active;
+      document.getElementById('statInactive').textContent = inactive;
+    }
+
+    // Render plans table
+    function renderPlans(plans) {
+      const tbody = document.getElementById('plansTable');
+
+      if (!plans.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="muted text-center">No plans found. Create your first plan!</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = plans.map(p => `
+        <tr style="${!p.is_active ? 'opacity: 0.6;' : ''}">
+          <td><code>${p.code}</code></td>
+          <td><strong>${p.name}</strong></td>
+          <td>${p.price_ugx.toLocaleString()} UGX</td>
+          <td>${formatDuration(p.duration_minutes)}</td>
+          <td class="plan-speed">
+            <span title="Download">${formatSpeed(p.speed_down_kbps)}</span>
+            <span title="Upload">${formatSpeed(p.speed_up_kbps)}</span>
+          </td>
+          <td>${formatData(p.data_mb)}</td>
+          <td>
+            <span class="badge ${p.is_active ? 'active' : 'disabled'}">${p.is_active ? 'Active' : 'Inactive'}</span>
+          </td>
+          <td class="plan-usage">
+            <span>${p.voucher_count || 0} vouchers</span>
+            <span>${p.order_count || 0} orders</span>
+          </td>
+          <td>
+            <button class="action-btn" onclick="editPlan(${p.id})" title="Edit">
+              <i data-lucide="edit-2"></i>
+            </button>
+            <button class="action-btn ${p.is_active ? 'action-btn--danger' : 'action-btn--success'}"
+                    onclick="togglePlan(${p.id})"
+                    title="${p.is_active ? 'Deactivate' : 'Activate'}">
+              <i data-lucide="${p.is_active ? 'eye-off' : 'eye'}"></i>
+            </button>
+            ${(p.voucher_count === 0 && p.order_count === 0) ? `
+              <button class="action-btn action-btn--danger" onclick="deletePlan(${p.id})" title="Delete">
+                <i data-lucide="trash-2"></i>
+              </button>
+            ` : ''}
+          </td>
+        </tr>
+      `).join('');
+
+      // Reinitialize lucide icons
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Open modal for new plan
+    function openPlanModal() {
+      console.log('openPlanModal() called');
+      editingPlanId = null;
+      document.getElementById('modalTitle').textContent = 'Add Plan';
+      document.getElementById('planId').value = '';
+      document.getElementById('planCode').value = '';
+      document.getElementById('planName').value = '';
+      document.getElementById('planPrice').value = '';
+      document.getElementById('planDuration').value = '';
+      document.getElementById('planSpeedDown').value = '';
+      document.getElementById('planSpeedUp').value = '';
+      document.getElementById('planDataMb').value = '';
+      document.getElementById('planModal').classList.add('active');
+    }
+
+    // Edit plan
+    async function editPlan(id) {
+      try {
+        const res = await fetch(`/admin/api/plans/${id}`, { credentials: 'same-origin' });
+        const data = await res.json();
+
+        if (data.ok) {
+          const p = data.plan;
+          editingPlanId = p.id;
+          document.getElementById('modalTitle').textContent = 'Edit Plan';
+          document.getElementById('planId').value = p.id;
+          document.getElementById('planCode').value = p.code;
+          document.getElementById('planName').value = p.name;
+          document.getElementById('planPrice').value = p.price_ugx;
+          document.getElementById('planDuration').value = p.duration_minutes;
+          document.getElementById('planSpeedDown').value = p.speed_down_kbps || '';
+          document.getElementById('planSpeedUp').value = p.speed_up_kbps || '';
+          document.getElementById('planDataMb').value = p.data_mb || '';
+          document.getElementById('planModal').classList.add('active');
+          updateHints();
+        }
+      } catch (e) {
+        alert('Failed to load plan');
+      }
+    }
+
+    // Close modal
+    function closePlanModal() {
+      document.getElementById('planModal').classList.remove('active');
+      editingPlanId = null;
+    }
+
+    // Save plan (create or update)
+    async function savePlan() {
+      const planData = {
+        code: document.getElementById('planCode').value.trim(),
+        name: document.getElementById('planName').value.trim(),
+        price_ugx: document.getElementById('planPrice').value,
+        duration_minutes: document.getElementById('planDuration').value,
+        speed_down_kbps: document.getElementById('planSpeedDown').value || null,
+        speed_up_kbps: document.getElementById('planSpeedUp').value || null,
+        data_mb: document.getElementById('planDataMb').value || null
+      };
+
+      if (!planData.code || !planData.name || !planData.price_ugx || !planData.duration_minutes) {
+        alert('Please fill in all required fields (Code, Name, Price, Duration)');
+        return;
+      }
+
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader"></i> Saving...';
+
+      try {
+        const url = editingPlanId ? `/admin/api/plans/${editingPlanId}` : '/admin/api/plans';
+        const method = editingPlanId ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(planData)
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+          closePlanModal();
+          loadPlans();
+        } else {
+          alert(data.message || 'Failed to save plan');
+        }
+      } catch (e) {
+        alert('Failed to save plan');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="save"></i> Save Plan';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+    }
+
+    // Toggle plan active status
+    async function togglePlan(id) {
+      try {
+        const res = await fetch(`/admin/api/plans/${id}/toggle`, { method: 'PATCH', credentials: 'same-origin' });
+        const data = await res.json();
+        if (data.ok) {
+          loadPlans();
+        } else {
+          alert(data.message || 'Failed to toggle plan');
+        }
+      } catch (e) {
+        alert('Failed to toggle plan');
+      }
+    }
+
+    // Delete plan
+    async function deletePlan(id) {
+      if (!confirm('Are you sure you want to delete this plan?')) return;
+
+      try {
+        const res = await fetch(`/admin/api/plans/${id}`, { method: 'DELETE', credentials: 'same-origin' });
+        const data = await res.json();
+        if (data.ok) {
+          loadPlans();
+        } else {
+          alert(data.message || 'Failed to delete plan');
+        }
+      } catch (e) {
+        alert('Failed to delete plan');
+      }
+    }
+
+    // Update hints based on input values
+    function updateHints() {
+      const duration = parseInt(document.getElementById('planDuration').value) || 0;
+      const speedDown = parseInt(document.getElementById('planSpeedDown').value) || 0;
+      const speedUp = parseInt(document.getElementById('planSpeedUp').value) || 0;
+
+      document.getElementById('durationHint').textContent = duration ? formatDuration(duration) : '';
+      document.getElementById('speedDownHint').textContent = speedDown ? formatSpeed(speedDown) : '';
+      document.getElementById('speedUpHint').textContent = speedUp ? formatSpeed(speedUp) : '';
+    }
+
+    // Event listeners for hints
+    document.getElementById('planDuration')?.addEventListener('input', updateHints);
+    document.getElementById('planSpeedDown')?.addEventListener('input', updateHints);
+    document.getElementById('planSpeedUp')?.addEventListener('input', updateHints);
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOMContentLoaded fired');
+      loadPlans();
+    });
+    console.log('Script end reached');
+  </script>
+</body>
+</html>

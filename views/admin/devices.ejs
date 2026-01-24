@@ -1,0 +1,770 @@
+<%- include("../partials/head", { title: "Bula Admin - Devices", assetVersion }) %>
+
+<body>
+  <div class="app">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <%- include("../partials/sidebar", { activeMenu: "devices" }) %>
+
+    <div class="main">
+      <%- include("../partials/topbar", { admin }) %>
+
+      <div class="content">
+        <div class="page-title">
+          <h2>Device Management</h2>
+          <div class="muted">Manage WiFi routers and access points</div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid--4" id="statsGrid">
+          <div class="card card--stat">
+            <div class="card-title">Total Devices</div>
+            <div class="card-value" id="statTotal">-</div>
+            <div class="card-sub">Registered routers</div>
+          </div>
+          <div class="card card--stat card--online">
+            <div class="card-title">Online</div>
+            <div class="card-value" id="statOnline">-</div>
+            <div class="card-sub">Reachable devices</div>
+          </div>
+          <div class="card card--stat card--offline">
+            <div class="card-title">Offline</div>
+            <div class="card-value" id="statOffline">-</div>
+            <div class="card-sub">Unreachable</div>
+          </div>
+          <div class="card card--stat">
+            <div class="card-title">Connected Users</div>
+            <div class="card-value" id="statUsers">-</div>
+            <div class="card-sub">Active sessions</div>
+          </div>
+        </div>
+
+        <!-- Devices List -->
+        <div class="card mt-16">
+          <div class="card-head">
+            <h3>Routers & Access Points</h3>
+            <div class="card-actions">
+              <button class="btn btn--sm" onclick="loadDevices()">
+                <i data-lucide="refresh-cw"></i>
+                Refresh
+              </button>
+              <button type="button" class="btn btn--primary" onclick="openAddModal()">
+                <i data-lucide="plus"></i>
+                Add Device
+              </button>
+            </div>
+          </div>
+
+          <!-- Devices Table -->
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Name</th>
+                  <th>IP Address</th>
+                  <th>Vendor</th>
+                  <th>Location</th>
+                  <th>Latency</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="devicesTable">
+                <tr><td colspan="7" class="muted text-center">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Device Modal -->
+  <div class="modal-overlay" id="deviceModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add Device</h3>
+        <button class="modal-close" onclick="closeDeviceModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="deviceId">
+
+        <div class="form-group">
+          <label class="form-label">Device Name *</label>
+          <input type="text" id="deviceName" class="form-input" placeholder="e.g., Main Router">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">IP Address *</label>
+            <input type="text" id="deviceIp" class="form-input" placeholder="e.g., 192.168.1.1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Short Name *</label>
+            <input type="text" id="deviceShortname" class="form-input" placeholder="e.g., router1">
+            <div class="form-hint">Used in RADIUS (no spaces)</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">RADIUS Secret *</label>
+          <div class="input-group">
+            <input type="password" id="deviceSecret" class="form-input" placeholder="Shared secret for RADIUS authentication">
+            <button type="button" class="input-btn" onclick="toggleSecret()">
+              <i data-lucide="eye" id="secretIcon"></i>
+            </button>
+          </div>
+          <div class="form-hint">Must match the secret configured on the router</div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Vendor</label>
+            <select id="deviceVendor" class="form-input">
+              <option value="mikrotik">MikroTik</option>
+              <option value="ubiquiti">Ubiquiti</option>
+              <option value="cisco">Cisco</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Location</label>
+            <select id="deviceLocation" class="form-input">
+              <option value="">-- Select Location --</option>
+            </select>
+            <div class="form-hint"><a href="/admin/locations" target="_blank">Manage locations</a></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea id="deviceDescription" class="form-input" rows="2" placeholder="Optional notes about this device"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeDeviceModal()">Cancel</button>
+        <button class="btn btn--primary" onclick="saveDevice()" id="saveBtn">
+          <i data-lucide="save"></i>
+          Save Device
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Device Details Modal -->
+  <div class="modal-overlay" id="detailsModal">
+    <div class="modal modal--lg">
+      <div class="modal-header">
+        <h3 id="detailsTitle">Device Details</h3>
+        <button class="modal-close" onclick="closeDetailsModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="details-grid">
+          <div class="detail-card">
+            <div class="detail-label">Status</div>
+            <div class="detail-value" id="detailStatus">-</div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-label">Connected Users</div>
+            <div class="detail-value" id="detailUsers">-</div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-label">Today's Download</div>
+            <div class="detail-value" id="detailDownToday">-</div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-label">Today's Upload</div>
+            <div class="detail-value" id="detailUpToday">-</div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-label">Monthly Download</div>
+            <div class="detail-value" id="detailDownMonth">-</div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-label">Monthly Upload</div>
+            <div class="detail-value" id="detailUpMonth">-</div>
+          </div>
+        </div>
+
+        <h4 class="section-title">Active Sessions</h4>
+        <div class="table-wrap">
+          <table class="table table--sm">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>IP Address</th>
+                <th>MAC Address</th>
+                <th>Download</th>
+                <th>Upload</th>
+                <th>Duration</th>
+              </tr>
+            </thead>
+            <tbody id="sessionsTable">
+              <tr><td colspan="6" class="muted text-center">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeDetailsModal()">Close</button>
+        <button class="btn" onclick="refreshDetails()">
+          <i data-lucide="refresh-cw"></i>
+          Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .card--online::before { background: #22c55e; }
+    .card--offline::before { background: #ef4444; }
+
+    .status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-dot::before {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #9ca3af;
+    }
+    .status-dot.online::before {
+      background: #22c55e;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+    }
+    .status-dot.offline::before {
+      background: #ef4444;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 0;
+    }
+    .input-group .form-input {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    .input-btn {
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-left: none;
+      background: var(--bg);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      cursor: pointer;
+    }
+    .input-btn:hover {
+      background: #e5e7eb;
+    }
+    .input-btn svg {
+      width: 18px;
+      height: 18px;
+      color: var(--text-muted);
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .detail-card {
+      background: var(--bg);
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      text-align: center;
+    }
+    .detail-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .detail-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .detail-value.online {
+      color: #22c55e;
+    }
+    .detail-value.offline {
+      color: #ef4444;
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .table--sm th,
+    .table--sm td {
+      padding: 8px 12px;
+      font-size: 0.8125rem;
+    }
+
+    .vendor-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--bg);
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+
+    .action-btn {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.8125rem;
+    }
+    .action-btn:hover {
+      background: var(--bg);
+    }
+    .action-btn--danger {
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+    .action-btn--danger:hover {
+      background: #fee2e2;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal {
+      background: var(--white);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal--lg {
+      max-width: 800px;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-header h3 {
+      margin: 0;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--text-muted);
+    }
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9375rem;
+      font-family: inherit;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    textarea.form-input {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      .details-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .modal {
+        margin: 10px;
+      }
+    }
+    @media (max-width: 480px) {
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <script src="/js/app.js?v=<%= assetVersion || '' %>"></script>
+  <script>
+    let devices = [];
+    let locations = [];
+    let currentDeviceId = null;
+
+    // Load locations for dropdown
+    async function loadLocations() {
+      try {
+        const res = await fetch('/admin/api/locations/active', { credentials: 'same-origin' });
+        const data = await res.json();
+
+        if (data.ok) {
+          locations = data.locations;
+          const select = document.getElementById('deviceLocation');
+          select.innerHTML = '<option value="">-- Select Location --</option>' +
+            locations.map(l => `<option value="${l.id}">${escapeHtml(l.name)}${l.address ? ' - ' + escapeHtml(l.address) : ''}</option>`).join('');
+        }
+      } catch (e) {
+        console.error('Failed to load locations:', e);
+      }
+    }
+
+    // Load devices
+    async function loadDevices() {
+      try {
+        const res = await fetch('/admin/api/devices', { credentials: 'same-origin' });
+        const data = await res.json();
+
+        if (data.ok) {
+          devices = data.devices;
+          renderDevices(devices);
+          updateStats(devices);
+        }
+      } catch (e) {
+        console.error('Failed to load devices:', e);
+        document.getElementById('devicesTable').innerHTML =
+          '<tr><td colspan="7" class="muted text-center">Failed to load devices</td></tr>';
+      }
+    }
+
+    // Update stats
+    function updateStats(devices) {
+      const total = devices.length;
+      const online = devices.filter(d => d.online).length;
+      const offline = total - online;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statOnline').textContent = online;
+      document.getElementById('statOffline').textContent = offline;
+
+      // Calculate total connected users (we'll get this from stats calls)
+      document.getElementById('statUsers').textContent = '-';
+    }
+
+    // Render devices table
+    function renderDevices(devices) {
+      const tbody = document.getElementById('devicesTable');
+
+      if (!devices.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="muted text-center">No devices found. Add your first router.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = devices.map(d => `
+        <tr>
+          <td>
+            <span class="status-dot ${d.online ? 'online' : 'offline'}">
+              ${d.online ? 'Online' : 'Offline'}
+            </span>
+          </td>
+          <td>
+            <strong>${escapeHtml(d.name)}</strong>
+            ${d.description ? `<div class="muted" style="font-size:0.75rem">${escapeHtml(d.description)}</div>` : ''}
+          </td>
+          <td><code>${d.ip_address}</code></td>
+          <td><span class="vendor-badge">${d.vendor || 'other'}</span></td>
+          <td>${d.location_name ? escapeHtml(d.location_name) : '-'}</td>
+          <td>${d.latency ? d.latency.toFixed(1) + ' ms' : '-'}</td>
+          <td>
+            <button class="action-btn" onclick="viewDetails(${d.id})" title="View Details">
+              <i data-lucide="bar-chart-2"></i>
+            </button>
+            <button class="action-btn" onclick="editDevice(${d.id})" title="Edit">
+              <i data-lucide="edit-2"></i>
+            </button>
+            <button class="action-btn action-btn--danger" onclick="deleteDevice(${d.id})" title="Delete">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Open add modal
+    function openAddModal() {
+      document.getElementById('modalTitle').textContent = 'Add Device';
+      document.getElementById('deviceId').value = '';
+      document.getElementById('deviceName').value = '';
+      document.getElementById('deviceIp').value = '';
+      document.getElementById('deviceShortname').value = '';
+      document.getElementById('deviceSecret').value = '';
+      document.getElementById('deviceVendor').value = 'mikrotik';
+      document.getElementById('deviceLocation').value = '';
+      document.getElementById('deviceDescription').value = '';
+      document.getElementById('deviceModal').classList.add('active');
+    }
+
+    // Edit device
+    function editDevice(id) {
+      const device = devices.find(d => d.id === id);
+      if (!device) return;
+
+      document.getElementById('modalTitle').textContent = 'Edit Device';
+      document.getElementById('deviceId').value = device.id;
+      document.getElementById('deviceName').value = device.name;
+      document.getElementById('deviceIp').value = device.ip_address;
+      document.getElementById('deviceShortname').value = device.shortname;
+      document.getElementById('deviceSecret').value = device.secret;
+      document.getElementById('deviceVendor').value = device.vendor || 'other';
+      document.getElementById('deviceLocation').value = device.location_id || '';
+      document.getElementById('deviceDescription').value = device.description || '';
+      document.getElementById('deviceModal').classList.add('active');
+    }
+
+    // Close device modal
+    function closeDeviceModal() {
+      document.getElementById('deviceModal').classList.remove('active');
+    }
+
+    // Toggle secret visibility
+    function toggleSecret() {
+      const input = document.getElementById('deviceSecret');
+      const icon = document.getElementById('secretIcon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        input.type = 'password';
+        icon.setAttribute('data-lucide', 'eye');
+      }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Save device
+    async function saveDevice() {
+      const id = document.getElementById('deviceId').value;
+      const name = document.getElementById('deviceName').value.trim();
+      const ip_address = document.getElementById('deviceIp').value.trim();
+      const shortname = document.getElementById('deviceShortname').value.trim();
+      const secret = document.getElementById('deviceSecret').value;
+      const vendor = document.getElementById('deviceVendor').value;
+      const location_id = document.getElementById('deviceLocation').value || null;
+      const description = document.getElementById('deviceDescription').value.trim();
+
+      if (!name || !ip_address || !shortname || !secret) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader"></i> Saving...';
+
+      try {
+        const url = id ? `/admin/api/devices/${id}` : '/admin/api/devices';
+        const method = id ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ name, ip_address, shortname, secret, vendor, location_id, description, is_active: true })
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+          closeDeviceModal();
+          loadDevices();
+        } else {
+          alert(data.message || 'Failed to save device');
+        }
+      } catch (e) {
+        alert('Failed to save device');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="save"></i> Save Device';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+    }
+
+    // Delete device
+    async function deleteDevice(id) {
+      const device = devices.find(d => d.id === id);
+      if (!device) return;
+
+      if (!confirm(`Are you sure you want to delete "${device.name}"? This will also remove it from the RADIUS NAS table.`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/admin/api/devices/${id}`, {
+          method: 'DELETE',
+          credentials: 'same-origin'
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+          loadDevices();
+        } else {
+          alert(data.message || 'Failed to delete device');
+        }
+      } catch (e) {
+        alert('Failed to delete device');
+      }
+    }
+
+    // View device details
+    async function viewDetails(id) {
+      currentDeviceId = id;
+      const device = devices.find(d => d.id === id);
+      if (!device) return;
+
+      document.getElementById('detailsTitle').textContent = device.name;
+      document.getElementById('detailStatus').textContent = 'Loading...';
+      document.getElementById('detailStatus').className = 'detail-value';
+      document.getElementById('detailUsers').textContent = '-';
+      document.getElementById('detailDownToday').textContent = '-';
+      document.getElementById('detailUpToday').textContent = '-';
+      document.getElementById('detailDownMonth').textContent = '-';
+      document.getElementById('detailUpMonth').textContent = '-';
+      document.getElementById('sessionsTable').innerHTML = '<tr><td colspan="6" class="muted text-center">Loading...</td></tr>';
+
+      document.getElementById('detailsModal').classList.add('active');
+
+      await refreshDetails();
+    }
+
+    // Refresh device details
+    async function refreshDetails() {
+      if (!currentDeviceId) return;
+
+      try {
+        const res = await fetch(`/admin/api/devices/${currentDeviceId}/stats`, { credentials: 'same-origin' });
+        const data = await res.json();
+
+        if (data.ok) {
+          const stats = data.stats;
+          const device = devices.find(d => d.id === currentDeviceId);
+
+          document.getElementById('detailStatus').textContent = device?.online ? 'Online' : 'Offline';
+          document.getElementById('detailStatus').className = 'detail-value ' + (device?.online ? 'online' : 'offline');
+          document.getElementById('detailUsers').textContent = stats.connectedUsers;
+          document.getElementById('detailDownToday').textContent = stats.bandwidthToday.downloadFormatted;
+          document.getElementById('detailUpToday').textContent = stats.bandwidthToday.uploadFormatted;
+          document.getElementById('detailDownMonth').textContent = stats.bandwidthMonth.downloadFormatted;
+          document.getElementById('detailUpMonth').textContent = stats.bandwidthMonth.uploadFormatted;
+
+          // Render sessions
+          const sessionsTable = document.getElementById('sessionsTable');
+          if (stats.activeSessions.length === 0) {
+            sessionsTable.innerHTML = '<tr><td colspan="6" class="muted text-center">No active sessions</td></tr>';
+          } else {
+            sessionsTable.innerHTML = stats.activeSessions.map(s => `
+              <tr>
+                <td><code>${s.username}</code></td>
+                <td>${s.framedipaddress || '-'}</td>
+                <td>${s.mac_address || '-'}</td>
+                <td>${s.downloadFormatted}</td>
+                <td>${s.uploadFormatted}</td>
+                <td>${formatDuration(s.acctsessiontime)}</td>
+              </tr>
+            `).join('');
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load device stats:', e);
+      }
+    }
+
+    // Format duration
+    function formatDuration(seconds) {
+      if (!seconds) return '-';
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = seconds % 60;
+      if (h > 0) return `${h}h ${m}m`;
+      if (m > 0) return `${m}m ${s}s`;
+      return `${s}s`;
+    }
+
+    // Close details modal
+    function closeDetailsModal() {
+      document.getElementById('detailsModal').classList.remove('active');
+      currentDeviceId = null;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadLocations();
+      loadDevices();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Uploads (user generated content)
+public/uploads/*
+!public/uploads/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temp files
+tmp/
+temp/
+*.tmp
+
+# Backup files
+_bak_*/
+*.bak
+*.bak.*
+*.bak_*
+*.fix.*
+*.fix2.*
+*.fix3.*
+*.bakfix.*
+*.log.*
+*.routefix.*
+*.webhookadd.*
+*.webhookfix.*
+*.webhookpay.*
+*.bk.*
+
+# Claude Code
+.claude/

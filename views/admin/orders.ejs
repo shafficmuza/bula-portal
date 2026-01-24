@@ -1,0 +1,60 @@
+<%- include("../partials/head", { title: "Bula Admin - Orders", assetVersion }) %>
+
+<body>
+  <div class="app">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <%- include("../partials/sidebar", { activeMenu: "orders" }) %>
+
+    <div class="main">
+      <%- include("../partials/topbar", { admin }) %>
+
+      <div class="content">
+        <div class="page-title">
+          <h2>Orders</h2>
+          <div class="muted">Latest 200 orders</div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>All Orders</h3>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Order Ref</th>
+                  <th>Status</th>
+                  <th>Amount</th>
+                  <th>Provider</th>
+                  <th>Voucher</th>
+                  <th>Paid At</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% (orders || []).forEach(o => { %>
+                  <tr>
+                    <td><code><%= o.order_ref %></code></td>
+                    <td><span class="badge <%= (o.status||'').toLowerCase() %>"><%= o.status %></span></td>
+                    <td><%= o.amount_ugx ? o.amount_ugx.toLocaleString() : '0' %> UGX</td>
+                    <td><%= o.payment_provider || '-' %></td>
+                    <td><code><%= o.username || '-' %></code></td>
+                    <td><%= o.paid_at ? new Date(o.paid_at).toLocaleString() : "-" %></td>
+                  </tr>
+                <% }) %>
+
+                <% if (!orders || orders.length === 0) { %>
+                  <tr><td colspan="6" class="muted text-center">No orders found</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js?v=<%= assetVersion || '' %>"></script>
+</body>
+</html>

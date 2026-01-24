@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Successful - Buulas WiFi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0ea56b 0%, #059669 50%, #047857 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 440px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      padding: 32px 24px;
+      text-align: center;
+      color: #fff;
+    }
+
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      animation: scaleIn 0.5s ease-out;
+    }
+
+    @keyframes scaleIn {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .success-icon svg {
+      width: 48px;
+      height: 48px;
+      stroke: #fff;
+      stroke-width: 3;
+    }
+
+    .card-header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .card-header p {
+      font-size: 0.9375rem;
+      opacity: 0.9;
+    }
+
+    .card-body {
+      padding: 24px;
+    }
+
+    .voucher-box {
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      border: 2px dashed #22c55e;
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .voucher-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #166534;
+      margin-bottom: 16px;
+    }
+
+    .voucher-field {
+      margin-bottom: 16px;
+    }
+
+    .voucher-field:last-child {
+      margin-bottom: 0;
+    }
+
+    .voucher-field-label {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .voucher-field-value {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #166534;
+      background: #fff;
+      padding: 16px 20px;
+      border-radius: 10px;
+      display: inline-block;
+      min-width: 200px;
+      letter-spacing: 0.15em;
+      user-select: all;
+      cursor: pointer;
+    }
+
+    .voucher-field-value:hover {
+      background: #f0fdf4;
+    }
+
+    .copy-hint {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    .plan-details {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .plan-name {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .plan-info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .plan-info-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.875rem;
+      color: #6b7280;
+    }
+
+    .plan-info-item svg {
+      width: 16px;
+      height: 16px;
+      color: #10b981;
+    }
+
+    .instructions {
+      margin-bottom: 20px;
+    }
+
+    .instructions h3 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 12px;
+    }
+
+    .instructions ol {
+      list-style: none;
+      counter-reset: steps;
+    }
+
+    .instructions li {
+      counter-increment: steps;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 10px;
+      font-size: 0.875rem;
+      color: #4b5563;
+    }
+
+    .instructions li::before {
+      content: counter(steps);
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      background: #10b981;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      text-align: center;
+      text-decoration: none;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -10px rgba(16, 185, 129, 0.5);
+    }
+
+    .btn-activate {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+      margin-bottom: 12px;
+    }
+
+    .btn-activate:hover {
+      box-shadow: 0 10px 20px -10px rgba(26, 115, 232, 0.5);
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+      margin-top: 12px;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .order-ref {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-top: 16px;
+    }
+
+    .brand {
+      text-align: center;
+      margin-top: 24px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.875rem;
+    }
+
+    .brand strong {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    @media (max-width: 480px) {
+      .voucher-field-value {
+        font-size: 1.5rem;
+        min-width: auto;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-header">
+        <div class="success-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <h1>Payment Successful!</h1>
+        <p>Your WiFi voucher is ready to use</p>
+      </div>
+
+      <div class="card-body">
+        <div class="voucher-box">
+          <div class="voucher-label">Your WiFi Voucher Code</div>
+
+          <div class="voucher-field">
+            <div class="voucher-field-label">Voucher Code</div>
+            <div class="voucher-field-value" onclick="copyToClipboard('<%= voucher.username %>', this)" title="Click to copy">
+              <%= voucher.username %>
+            </div>
+            <div class="copy-hint">Tap to copy</div>
+          </div>
+        </div>
+
+        <div class="plan-details">
+          <div class="plan-name"><%= plan.name %></div>
+          <div class="plan-info">
+            <div class="plan-info-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <%= plan.duration_display %>
+            </div>
+            <% if (plan.speed_display) { %>
+            <div class="plan-info-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+              </svg>
+              <%= plan.speed_display %>
+            </div>
+            <% } %>
+            <% if (plan.data_display) { %>
+            <div class="plan-info-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <%= plan.data_display %>
+            </div>
+            <% } %>
+            <div class="plan-info-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+              <%= Number(plan.price_ugx).toLocaleString() %> UGX
+            </div>
+          </div>
+        </div>
+
+        <div class="instructions">
+          <h3>How to Connect</h3>
+          <ol>
+            <li>Connect to the <strong>Buulas WiFi</strong> network</li>
+            <li>Open your browser - the login page will appear</li>
+            <li>Enter your <strong>Voucher Code</strong> above in both username and password fields</li>
+            <li>Click Login and enjoy your internet!</li>
+          </ol>
+        </div>
+
+        <button class="btn btn-primary btn-activate" onclick="activateNow()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;margin-right:8px;vertical-align:middle;">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+            <circle cx="12" cy="20" r="1"></circle>
+          </svg>
+          Activate & Connect Now
+        </button>
+
+        <button class="btn btn-secondary" onclick="copyCredentials()">
+          Copy Voucher Code
+        </button>
+
+        <a href="/" class="btn btn-secondary">
+          Back to Home
+        </a>
+
+        <div class="order-ref">
+          Order Reference: <%= orderRef %>
+        </div>
+      </div>
+    </div>
+
+    <div class="brand">
+      Powered by <strong>Buulas Investments</strong>
+    </div>
+  </div>
+
+  <script>
+    function copyToClipboard(text, element) {
+      navigator.clipboard.writeText(text).then(() => {
+        const original = element.textContent;
+        element.textContent = 'Copied!';
+        element.style.background = '#dcfce7';
+        setTimeout(() => {
+          element.textContent = original;
+          element.style.background = '#fff';
+        }, 1500);
+      }).catch(() => {
+        // Fallback for older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+
+        const original = element.textContent;
+        element.textContent = 'Copied!';
+        setTimeout(() => {
+          element.textContent = original;
+        }, 1500);
+      });
+    }
+
+    function copyCredentials() {
+      const text = `Buulas WiFi Voucher Code: <%= voucher.username %>`;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        const original = btn.textContent;
+        btn.textContent = 'Copied to Clipboard!';
+        setTimeout(() => {
+          btn.textContent = original;
+        }, 2000);
+      });
+    }
+
+    function activateNow() {
+      const voucherCode = '<%= voucher.username %>';
+
+      // Store voucher code for later use
+      localStorage.setItem('voucher_code', voucherCode);
+
+      // Check for MikroTik redirect parameters in URL or localStorage
+      const urlParams = new URLSearchParams(window.location.search);
+      let linkLogin = urlParams.get('link-login') || urlParams.get('link-login-only');
+
+      // Also check localStorage for saved redirect URL
+      if (!linkLogin) {
+        linkLogin = localStorage.getItem('hotspot_login_url');
+      }
+
+      if (linkLogin) {
+        // MikroTik hotspot - redirect with credentials
+        try {
+          const loginUrl = new URL(linkLogin);
+          loginUrl.searchParams.set('username', voucherCode);
+          loginUrl.searchParams.set('password', voucherCode);
+          window.location.href = loginUrl.toString();
+        } catch(e) {
+          // Invalid URL, show message
+          alert('Voucher activated! Connect to the WiFi network and use code: ' + voucherCode);
+        }
+      } else {
+        // No hotspot redirect URL - show instructions
+        const msg = 'Your voucher is ready!\n\n' +
+                    '1. Connect to the Buulas WiFi network\n' +
+                    '2. A login page will appear\n' +
+                    '3. Enter this code as both username and password:\n\n' +
+                    voucherCode + '\n\n' +
+                    'The code has been copied to your clipboard.';
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(voucherCode).catch(() => {});
+
+        alert(msg);
+      }
+    }
+  </script>
+</body>
+</html>

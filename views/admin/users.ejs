@@ -1,0 +1,606 @@
+<%- include("../partials/head", { title: "Bula Admin - Users", assetVersion }) %>
+
+<body>
+  <div class="app">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <%- include("../partials/sidebar", { activeMenu: "users" }) %>
+
+    <div class="main">
+      <%- include("../partials/topbar", { admin }) %>
+
+      <div class="content">
+        <div class="page-title">
+          <h2>User Management</h2>
+          <div class="muted">Manage administrator accounts</div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid--4" id="statsGrid">
+          <div class="card card--stat">
+            <div class="card-title">Total Users</div>
+            <div class="card-value" id="statTotal">-</div>
+            <div class="card-sub">All accounts</div>
+          </div>
+          <div class="card card--stat">
+            <div class="card-title">Active</div>
+            <div class="card-value" id="statActive">-</div>
+            <div class="card-sub">Can login</div>
+          </div>
+          <div class="card card--stat">
+            <div class="card-title">Super Admins</div>
+            <div class="card-value" id="statSuperAdmin">-</div>
+            <div class="card-sub">Full access</div>
+          </div>
+          <div class="card card--stat">
+            <div class="card-title">Staff</div>
+            <div class="card-value" id="statStaff">-</div>
+            <div class="card-sub">Limited access</div>
+          </div>
+        </div>
+
+        <!-- Users List -->
+        <div class="card mt-16">
+          <div class="card-head">
+            <h3>All Users</h3>
+            <div class="card-actions">
+              <button class="btn btn--sm" onclick="loadUsers()">
+                <i data-lucide="refresh-cw"></i>
+                Refresh
+              </button>
+              <button type="button" class="btn btn--primary" onclick="openAddModal()">
+                <i data-lucide="user-plus"></i>
+                Add User
+              </button>
+            </div>
+          </div>
+
+          <!-- Users Table -->
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Last Login</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTable">
+                <tr><td colspan="6" class="muted text-center">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit User Modal -->
+  <div class="modal-overlay" id="userModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add User</h3>
+        <button class="modal-close" onclick="closeModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="userId">
+
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="userFullName" class="form-input" placeholder="e.g., John Doe">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email *</label>
+          <input type="email" id="userEmail" class="form-input" placeholder="e.g., john@example.com">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password <span id="passwordHint">*</span></label>
+          <div class="input-group">
+            <input type="password" id="userPassword" class="form-input" placeholder="Min 6 characters">
+            <button type="button" class="input-btn" onclick="togglePassword()">
+              <i data-lucide="eye" id="passwordIcon"></i>
+            </button>
+          </div>
+          <div class="form-hint" id="passwordNote">Required for new users</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Role *</label>
+          <select id="userRole" class="form-input">
+            <option value="STAFF">Staff - Limited access</option>
+            <option value="ADMIN">Admin - Standard access</option>
+            <option value="SUPER_ADMIN">Super Admin - Full access</option>
+          </select>
+          <div class="form-hint">Super Admins can manage users and all settings</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn--primary" onclick="saveUser()" id="saveBtn">
+          <i data-lucide="save"></i>
+          Save User
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .input-group {
+      display: flex;
+      gap: 0;
+    }
+    .input-group .form-input {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    .input-btn {
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-left: none;
+      background: var(--bg);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      cursor: pointer;
+    }
+    .input-btn:hover {
+      background: #e5e7eb;
+    }
+    .input-btn svg {
+      width: 18px;
+      height: 18px;
+      color: var(--text-muted);
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      background: var(--primary-light);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .user-name {
+      font-weight: 500;
+    }
+    .user-id {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .role-badge.super_admin {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .role-badge.admin {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .role-badge.staff {
+      background: #f3f4f6;
+      color: #4b5563;
+    }
+
+    .action-btn {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.8125rem;
+    }
+    .action-btn:hover {
+      background: var(--bg);
+    }
+    .action-btn--danger {
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+    .action-btn--danger:hover {
+      background: #fee2e2;
+    }
+    .action-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .self-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      background: var(--primary-light);
+      color: var(--primary);
+      border-radius: 50px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal {
+      background: var(--white);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-header h3 {
+      margin: 0;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--text-muted);
+    }
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9375rem;
+      font-family: inherit;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    @media (max-width: 768px) {
+      .modal {
+        margin: 10px;
+      }
+    }
+  </style>
+
+  <script src="/js/app.js?v=<%= assetVersion || '' %>"></script>
+  <script>
+    const currentUserId = <%= admin.id %>;
+    let users = [];
+
+    // Load users
+    async function loadUsers() {
+      try {
+        const res = await fetch('/admin/api/users', { credentials: 'same-origin' });
+        const data = await res.json();
+
+        if (data.ok) {
+          users = data.users;
+          renderUsers(users);
+          updateStats(users);
+        } else {
+          document.getElementById('usersTable').innerHTML =
+            `<tr><td colspan="6" class="muted text-center">${data.message || 'Failed to load users'}</td></tr>`;
+        }
+      } catch (e) {
+        console.error('Failed to load users:', e);
+        document.getElementById('usersTable').innerHTML =
+          '<tr><td colspan="6" class="muted text-center">Failed to load users</td></tr>';
+      }
+    }
+
+    // Update stats
+    function updateStats(users) {
+      const total = users.length;
+      const active = users.filter(u => u.is_active).length;
+      const superAdmins = users.filter(u => u.role === 'SUPER_ADMIN').length;
+      const staff = users.filter(u => u.role === 'STAFF').length;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statActive').textContent = active;
+      document.getElementById('statSuperAdmin').textContent = superAdmins;
+      document.getElementById('statStaff').textContent = staff;
+    }
+
+    // Get initials from name or email
+    function getInitials(name, email) {
+      if (name) {
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+      }
+      return email.slice(0, 2).toUpperCase();
+    }
+
+    // Format date
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Render users table
+    function renderUsers(users) {
+      const tbody = document.getElementById('usersTable');
+
+      if (!users.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="muted text-center">No users found</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = users.map(u => {
+        const isSelf = u.id === currentUserId;
+        return `
+        <tr>
+          <td>
+            <div class="user-info">
+              <div class="user-avatar">${getInitials(u.full_name, u.email)}</div>
+              <div>
+                <div class="user-name">
+                  ${escapeHtml(u.full_name || 'No name')}
+                  ${isSelf ? '<span class="self-badge">You</span>' : ''}
+                </div>
+                <div class="user-id">ID: ${u.id}</div>
+              </div>
+            </div>
+          </td>
+          <td>${escapeHtml(u.email)}</td>
+          <td><span class="role-badge ${u.role.toLowerCase()}">${u.role.replace('_', ' ')}</span></td>
+          <td><span class="badge ${u.is_active ? 'active' : ''}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+          <td>${formatDate(u.last_login)}</td>
+          <td>
+            ${isSelf ? `
+              <a href="/admin/profile" class="action-btn" title="Edit Profile">
+                <i data-lucide="user-cog"></i>
+              </a>
+            ` : `
+              <button class="action-btn" onclick="editUser(${u.id})" title="Edit">
+                <i data-lucide="edit-2"></i>
+              </button>
+              <button class="action-btn" onclick="toggleStatus(${u.id})" title="${u.is_active ? 'Deactivate' : 'Activate'}">
+                <i data-lucide="${u.is_active ? 'user-x' : 'user-check'}"></i>
+              </button>
+              <button class="action-btn action-btn--danger" onclick="deleteUser(${u.id})" title="Delete">
+                <i data-lucide="trash-2"></i>
+              </button>
+            `}
+          </td>
+        </tr>
+      `}).join('');
+
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Open add modal
+    function openAddModal() {
+      document.getElementById('modalTitle').textContent = 'Add User';
+      document.getElementById('userId').value = '';
+      document.getElementById('userFullName').value = '';
+      document.getElementById('userEmail').value = '';
+      document.getElementById('userPassword').value = '';
+      document.getElementById('userRole').value = 'STAFF';
+      document.getElementById('passwordHint').textContent = '*';
+      document.getElementById('passwordNote').textContent = 'Required for new users';
+      document.getElementById('userModal').classList.add('active');
+    }
+
+    // Edit user
+    function editUser(id) {
+      const user = users.find(u => u.id === id);
+      if (!user) return;
+
+      document.getElementById('modalTitle').textContent = 'Edit User';
+      document.getElementById('userId').value = user.id;
+      document.getElementById('userFullName').value = user.full_name || '';
+      document.getElementById('userEmail').value = user.email;
+      document.getElementById('userPassword').value = '';
+      document.getElementById('userRole').value = user.role;
+      document.getElementById('passwordHint').textContent = '';
+      document.getElementById('passwordNote').textContent = 'Leave blank to keep current password';
+      document.getElementById('userModal').classList.add('active');
+    }
+
+    // Close modal
+    function closeModal() {
+      document.getElementById('userModal').classList.remove('active');
+    }
+
+    // Toggle password visibility
+    function togglePassword() {
+      const input = document.getElementById('userPassword');
+      const icon = document.getElementById('passwordIcon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        input.type = 'password';
+        icon.setAttribute('data-lucide', 'eye');
+      }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Save user
+    async function saveUser() {
+      const id = document.getElementById('userId').value;
+      const full_name = document.getElementById('userFullName').value.trim();
+      const email = document.getElementById('userEmail').value.trim();
+      const password = document.getElementById('userPassword').value;
+      const role = document.getElementById('userRole').value;
+
+      if (!email) {
+        alert('Please enter an email address');
+        return;
+      }
+
+      if (!id && !password) {
+        alert('Password is required for new users');
+        return;
+      }
+
+      if (password && password.length < 6) {
+        alert('Password must be at least 6 characters');
+        return;
+      }
+
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader"></i> Saving...';
+
+      try {
+        const url = id ? `/admin/api/users/${id}` : '/admin/api/users';
+        const method = id ? 'PUT' : 'POST';
+        const body = { email, full_name, role };
+        if (password) body.password = password;
+
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+          closeModal();
+          loadUsers();
+        } else {
+          alert(data.message || 'Failed to save user');
+        }
+      } catch (e) {
+        alert('Failed to save user');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="save"></i> Save User';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+    }
+
+    // Toggle status
+    async function toggleStatus(id) {
+      const user = users.find(u => u.id === id);
+      if (!user) return;
+
+      const action = user.is_active ? 'deactivate' : 'activate';
+      if (!confirm(`Are you sure you want to ${action} "${user.full_name || user.email}"?`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/admin/api/users/${id}/toggle`, {
+          method: 'PATCH',
+          credentials: 'same-origin'
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+          loadUsers();
+        } else {
+          alert(data.message || 'Failed to toggle status');
+        }
+      } catch (e) {
+        alert('Failed to toggle status');
+      }
+    }
+
+    // Delete user
+    async function deleteUser(id) {
+      const user = users.find(u => u.id === id);
+      if (!user) return;
+
+      if (!confirm(`Are you sure you want to delete "${user.full_name || user.email}"? This cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/admin/api/users/${id}`, {
+          method: 'DELETE',
+          credentials: 'same-origin'
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+          loadUsers();
+        } else {
+          alert(data.message || 'Failed to delete user');
+        }
+      } catch (e) {
+        alert('Failed to delete user');
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadUsers();
+    });
+  </script>
+</body>
+</html>

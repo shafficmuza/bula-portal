@@ -1,0 +1,67 @@
+<% const cur = (typeof active !== "undefined" && active) || (typeof activeMenu !== "undefined" && activeMenu) || ""; %>
+
+<aside class="sidebar">
+  <div class="brand">
+    <% if (typeof settings !== 'undefined' && settings.logo_url) { %>
+    <img src="<%= settings.logo_url %>" alt="Logo" class="brand__logo" style="max-width: 48px; max-height: 48px; margin-bottom: 8px;">
+    <% } %>
+    <div class="brand__title"><%= (typeof settings !== 'undefined' && settings.business_name) ? settings.business_name : 'BUULAS INVESTMENTS' %></div>
+    <div class="brand__sub"><%= (typeof settings !== 'undefined' && settings.tagline) ? settings.tagline : 'WiFi Hotspot Admin' %></div>
+  </div>
+
+  <nav class="nav">
+    <a class="nav__item <%= cur==='dashboard'?'is-active':'' %>" href="/admin/">
+      <i data-lucide="layout-dashboard"></i>
+      Dashboard
+    </a>
+
+    <a class="nav__item <%= cur==='orders'?'is-active':'' %>" href="/admin/orders">
+      <i data-lucide="shopping-cart"></i>
+      Orders
+    </a>
+
+    <a class="nav__item <%= cur==='plans'?'is-active':'' %>" href="/admin/plans">
+      <i data-lucide="package"></i>
+      Plans
+    </a>
+
+    <a class="nav__item <%= cur==='vouchers'?'is-active':'' %>" href="/admin/vouchers">
+      <i data-lucide="ticket"></i>
+      Vouchers
+    </a>
+
+    <a class="nav__item <%= cur==='devices'?'is-active':'' %>" href="/admin/devices">
+      <i data-lucide="router"></i>
+      Devices
+    </a>
+
+    <a class="nav__item <%= cur==='locations'?'is-active':'' %>" href="/admin/locations">
+      <i data-lucide="map-pin"></i>
+      Locations
+    </a>
+
+    <% if (typeof admin !== 'undefined' && admin.role === 'SUPER_ADMIN') { %>
+    <a class="nav__item <%= cur==='users'?'is-active':'' %>" href="/admin/users">
+      <i data-lucide="users"></i>
+      Users
+    </a>
+    <% } %>
+
+    <div class="nav__divider"></div>
+
+    <a class="nav__item <%= cur==='profile'?'is-active':'' %>" href="/admin/profile">
+      <i data-lucide="user-cog"></i>
+      Profile
+    </a>
+
+    <a class="nav__item <%= cur==='settings'?'is-active':'' %>" href="/admin/settings">
+      <i data-lucide="settings"></i>
+      Settings
+    </a>
+
+    <a class="nav__item" href="/admin/logout">
+      <i data-lucide="log-out"></i>
+      Logout
+    </a>
+  </nav>
+</aside>

@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head>
+  <%- include("partials/head") %>
+</head>
+<body>
+  <div class="app">
+    <%- include("partials/sidebar") %>
+
+    <main class="main">
+      <%- include("partials/topbar") %>
+      <section class="content">
+        <%- body %>
+      </section>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>lucide.createIcons()</script>
+</body>
+</html>

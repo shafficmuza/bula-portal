@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="<%= (typeof settings !== 'undefined' && settings.primary_color) ? settings.primary_color : '#0ea56b' %>" />
+  <title><%= title || ((typeof settings !== 'undefined' && settings.business_name) ? settings.business_name : "BUULAS INVESTMENTS") %></title>
+  <% if (typeof settings !== 'undefined' && settings.favicon_url) { %>
+  <link rel="icon" href="<%= settings.favicon_url %>" type="image/x-icon">
+  <% } %>
+  <link rel="stylesheet" href="/css/app.css?v=<%= (assetVersion || Date.now()) %>">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <% if (typeof settings !== 'undefined' && settings.primary_color) { %>
+  <style>
+    :root {
+      --primary: <%= settings.primary_color %>;
+      --primary-light: <%= settings.primary_light || '#e6f6ef' %>;
+      --primary-dark: <%= settings.primary_dark || '#0b8a59' %>;
+    }
+  </style>
+  <% } %>
+</head>

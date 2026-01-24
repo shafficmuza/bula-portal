@@ -1,0 +1,498 @@
+<%- include("../partials/head", { title: "Bula Admin - Profile", assetVersion }) %>
+
+<body>
+  <div class="app">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <%- include("../partials/sidebar", { activeMenu: "profile" }) %>
+
+    <div class="main">
+      <%- include("../partials/topbar", { admin }) %>
+
+      <div class="content">
+        <div class="page-title">
+          <h2>Profile Settings</h2>
+          <div class="muted">Manage your account information</div>
+        </div>
+
+        <div class="profile-grid">
+          <!-- Profile Info Card -->
+          <div class="card">
+            <div class="card-head">
+              <h3>Profile Information</h3>
+            </div>
+
+            <div class="profile-header">
+              <div class="profile-avatar" id="profileAvatar">
+                <%= admin.name ? admin.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : admin.email.slice(0, 2).toUpperCase() %>
+              </div>
+              <div class="profile-meta">
+                <div class="profile-name" id="displayName"><%= admin.name || 'No name set' %></div>
+                <div class="profile-role">
+                  <span class="role-badge <%= admin.role.toLowerCase() %>"><%= admin.role.replace('_', ' ') %></span>
+                </div>
+              </div>
+            </div>
+
+            <form id="profileForm" onsubmit="updateProfile(event)">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="fullName" class="form-input" value="<%= admin.name || '' %>" placeholder="Enter your full name">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="email" class="form-input" value="<%= admin.email %>" placeholder="Enter your email">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Role</label>
+                <input type="text" class="form-input" value="<%= admin.role.replace('_', ' ') %>" disabled>
+                <div class="form-hint">Contact a Super Admin to change your role</div>
+              </div>
+
+              <button type="submit" class="btn btn--primary" id="profileBtn">
+                <i data-lucide="save"></i>
+                Save Changes
+              </button>
+            </form>
+          </div>
+
+          <!-- Change Password Card -->
+          <div class="card">
+            <div class="card-head">
+              <h3>Change Password</h3>
+            </div>
+
+            <form id="passwordForm" onsubmit="changePassword(event)">
+              <div class="form-group">
+                <label class="form-label">Current Password</label>
+                <div class="input-group">
+                  <input type="password" id="currentPassword" class="form-input" placeholder="Enter current password">
+                  <button type="button" class="input-btn" onclick="togglePassword('currentPassword', 'currentPwdIcon')">
+                    <i data-lucide="eye" id="currentPwdIcon"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">New Password</label>
+                <div class="input-group">
+                  <input type="password" id="newPassword" class="form-input" placeholder="Min 6 characters">
+                  <button type="button" class="input-btn" onclick="togglePassword('newPassword', 'newPwdIcon')">
+                    <i data-lucide="eye" id="newPwdIcon"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Confirm New Password</label>
+                <div class="input-group">
+                  <input type="password" id="confirmPassword" class="form-input" placeholder="Repeat new password">
+                  <button type="button" class="input-btn" onclick="togglePassword('confirmPassword', 'confirmPwdIcon')">
+                    <i data-lucide="eye" id="confirmPwdIcon"></i>
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn--primary" id="passwordBtn">
+                <i data-lucide="lock"></i>
+                Change Password
+              </button>
+            </form>
+          </div>
+
+          <!-- Account Info Card -->
+          <div class="card">
+            <div class="card-head">
+              <h3>Account Information</h3>
+            </div>
+
+            <div class="info-list">
+              <div class="info-item">
+                <div class="info-label">Account ID</div>
+                <div class="info-value"><%= admin.id %></div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Member Since</div>
+                <div class="info-value" id="memberSince">Loading...</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Last Login</div>
+                <div class="info-value" id="lastLogin">Loading...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Danger Zone Card -->
+          <div class="card card--danger">
+            <div class="card-head">
+              <h3>Session</h3>
+            </div>
+
+            <p class="danger-text">Sign out of your account on this device.</p>
+
+            <a href="/admin/logout" class="btn btn--danger">
+              <i data-lucide="log-out"></i>
+              Sign Out
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding-bottom: 24px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.75rem;
+    }
+
+    .profile-name {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .role-badge.super_admin {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .role-badge.admin {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .role-badge.staff {
+      background: #f3f4f6;
+      color: #4b5563;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9375rem;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .form-input:disabled {
+      background: var(--bg);
+      color: var(--text-muted);
+      cursor: not-allowed;
+    }
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 0;
+    }
+    .input-group .form-input {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    .input-btn {
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-left: none;
+      background: var(--bg);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      cursor: pointer;
+    }
+    .input-btn:hover {
+      background: #e5e7eb;
+    }
+    .input-btn svg {
+      width: 18px;
+      height: 18px;
+      color: var(--text-muted);
+    }
+
+    .info-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .info-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .info-label {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+    .info-value {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .card--danger {
+      border-color: #fecaca;
+    }
+    .danger-text {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+    .btn--danger {
+      background: #fee2e2;
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+    .btn--danger:hover {
+      background: #fecaca;
+    }
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      font-size: 0.875rem;
+    }
+    .alert--success {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    .alert--error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    @media (max-width: 1024px) {
+      .profile-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .profile-header {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+  </style>
+
+  <script src="/js/app.js?v=<%= assetVersion || '' %>"></script>
+  <script>
+    // Load profile data
+    async function loadProfile() {
+      try {
+        const res = await fetch('/admin/api/profile', { credentials: 'same-origin' });
+        const data = await res.json();
+
+        if (data.ok) {
+          const user = data.user;
+          document.getElementById('memberSince').textContent = formatDate(user.created_at);
+          document.getElementById('lastLogin').textContent = user.last_login ? formatDate(user.last_login) : 'Never';
+        }
+      } catch (e) {
+        console.error('Failed to load profile:', e);
+      }
+    }
+
+    // Format date
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Update profile
+    async function updateProfile(e) {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value.trim();
+      const full_name = document.getElementById('fullName').value.trim();
+
+      if (!email) {
+        showAlert('profileForm', 'Email is required', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('profileBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader"></i> Saving...';
+
+      try {
+        const res = await fetch('/admin/api/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ email, full_name })
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+          showAlert('profileForm', 'Profile updated successfully', 'success');
+          // Update display
+          document.getElementById('displayName').textContent = full_name || 'No name set';
+          document.getElementById('profileAvatar').textContent = full_name
+            ? full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+            : email.slice(0, 2).toUpperCase();
+        } else {
+          showAlert('profileForm', data.message || 'Failed to update profile', 'error');
+        }
+      } catch (e) {
+        showAlert('profileForm', 'Failed to update profile', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="save"></i> Save Changes';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+    }
+
+    // Change password
+    async function changePassword(e) {
+      e.preventDefault();
+
+      const current_password = document.getElementById('currentPassword').value;
+      const new_password = document.getElementById('newPassword').value;
+      const confirm_password = document.getElementById('confirmPassword').value;
+
+      if (!current_password || !new_password) {
+        showAlert('passwordForm', 'All fields are required', 'error');
+        return;
+      }
+
+      if (new_password.length < 6) {
+        showAlert('passwordForm', 'New password must be at least 6 characters', 'error');
+        return;
+      }
+
+      if (new_password !== confirm_password) {
+        showAlert('passwordForm', 'New passwords do not match', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('passwordBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader"></i> Changing...';
+
+      try {
+        const res = await fetch('/admin/api/profile/password', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ current_password, new_password })
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+          showAlert('passwordForm', 'Password changed successfully', 'success');
+          document.getElementById('currentPassword').value = '';
+          document.getElementById('newPassword').value = '';
+          document.getElementById('confirmPassword').value = '';
+        } else {
+          showAlert('passwordForm', data.message || 'Failed to change password', 'error');
+        }
+      } catch (e) {
+        showAlert('passwordForm', 'Failed to change password', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="lock"></i> Change Password';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+    }
+
+    // Show alert
+    function showAlert(formId, message, type) {
+      const form = document.getElementById(formId);
+      const existingAlert = form.querySelector('.alert');
+      if (existingAlert) existingAlert.remove();
+
+      const alert = document.createElement('div');
+      alert.className = `alert alert--${type}`;
+      alert.textContent = message;
+      form.insertBefore(alert, form.firstChild);
+
+      setTimeout(() => alert.remove(), 5000);
+    }
+
+    // Toggle password visibility
+    function togglePassword(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        input.type = 'password';
+        icon.setAttribute('data-lucide', 'eye');
+      }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadProfile();
+    });
+  </script>
+</body>
+</html>
