@@ -1029,8 +1029,8 @@ router.post("/api/vouchers/generate", requireAdmin, async (req, res) => {
     }
 
     for (let i = 0; i < quantity; i++) {
-      // Generate numeric-only voucher code (8 digits)
-      const code = String(Math.floor(10000000 + Math.random() * 90000000));
+      // Generate numeric-only voucher code (5 digits)
+      const code = String(Math.floor(10000 + Math.random() * 90000));
 
       await portalDB.query(
         `INSERT INTO vouchers (code, password, plan_id, status, created_by, expires_at)

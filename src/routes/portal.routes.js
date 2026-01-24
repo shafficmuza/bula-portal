@@ -48,8 +48,8 @@ router.post("/purchase/test-pay", async (req, res, next) => {
     );
     const [[cust]] = await portalDB.query("SELECT id FROM customers WHERE msisdn=?", [msisdn]);
 
-    // Generate numeric-only voucher code (used as both username and password for voucher-based activation)
-    const voucherCode = String(Math.floor(10000000 + Math.random() * 90000000));
+    // Generate numeric-only voucher code (5 digits, used as both username and password)
+    const voucherCode = String(Math.floor(10000 + Math.random() * 90000));
     const orderRef = `ORD_${nanoid(14)}`;
 
     // Create order (PAID for test)

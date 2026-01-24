@@ -52,9 +52,9 @@ router.post("/init", async (req, res) => {
     const plan = plans[0];
     if (!plan) return res.status(404).json({ ok: false, message: "Plan not found" });
 
-    // Generate numeric-only voucher code, but activate ONLY after webhook confirms payment
+    // Generate numeric-only voucher code (5 digits), but activate ONLY after webhook confirms payment
     // Voucher code is used as both username and password (voucher-based activation)
-    const voucherCode = String(Math.floor(10000000 + Math.random() * 90000000));
+    const voucherCode = String(Math.floor(10000 + Math.random() * 90000));
 
     const orderRef = `ORD_${nanoid(14)}`;
 	// customer_id: for now we can use 0 and later map it to a real customer record

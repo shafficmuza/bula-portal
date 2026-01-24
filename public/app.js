@@ -86,8 +86,8 @@
   loginBtn.addEventListener('click', async () => {
     const code = (voucherCodeEl.value || '').trim().replace(/\D/g, '');
 
-    if(!code || code.length < 6){
-      showVoucherMsg('Please enter a valid 8-digit voucher code', false);
+    if(!code || code.length < 5){
+      showVoucherMsg('Please enter a valid 5-digit voucher code', false);
       return;
     }
 
