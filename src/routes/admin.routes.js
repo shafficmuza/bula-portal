@@ -156,6 +156,36 @@ router.get("/settings", requireAdmin, async (req, res) => {
   res.render("admin/settings", { admin: req.session.admin, assetVersion: ASSET_VERSION, settings });
 });
 
+// Documentation page
+router.get("/docs", requireAdmin, async (req, res) => {
+  const env = require("../config/env");
+  const baseUrl = env.BASE_URL || "https://bula.prosystemsug.com";
+  const portalDomain = baseUrl.replace(/^https?:\/\//, "").split("/")[0];
+
+  // Get server IP (try to extract from BASE_URL or use a default)
+  let serverIp = "YOUR-SERVER-IP";
+  try {
+    const os = require("os");
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+      for (const iface of interfaces[name]) {
+        if (iface.family === "IPv4" && !iface.internal) {
+          serverIp = iface.address;
+          break;
+        }
+      }
+    }
+  } catch (e) {}
+
+  res.render("admin/docs", {
+    admin: req.session.admin,
+    assetVersion: ASSET_VERSION,
+    baseUrl,
+    portalDomain,
+    serverIp
+  });
+});
+
 // Devices page
 router.get("/devices", requireAdmin, async (req, res) => {
   res.render("admin/devices", { admin: req.session.admin, assetVersion: ASSET_VERSION });

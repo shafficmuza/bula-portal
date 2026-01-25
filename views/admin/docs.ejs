@@ -1,0 +1,465 @@
+<%- include("../partials/head", { title: "MikroTik Setup Guide", assetVersion }) %>
+
+<body>
+  <div class="app">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <%- include("../partials/sidebar", { activeMenu: "docs" }) %>
+
+    <div class="main">
+      <%- include("../partials/topbar", { admin }) %>
+
+      <div class="content">
+        <div class="page-title">
+          <h2>MikroTik Router Setup Guide</h2>
+          <div class="muted">Complete SOP for connecting your MikroTik router to the Bula WiFi Portal</div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Table of Contents</h3>
+          </div>
+          <div class="card-body docs-toc">
+            <ol>
+              <li><a href="#prerequisites">Prerequisites</a></li>
+              <li><a href="#step1">Step 1: Add Device in Portal</a></li>
+              <li><a href="#step2">Step 2: Configure RADIUS Client on MikroTik</a></li>
+              <li><a href="#step3">Step 3: Configure Hotspot Server</a></li>
+              <li><a href="#step4">Step 4: Configure Walled Garden</a></li>
+              <li><a href="#step5">Step 5: Customize Login Page</a></li>
+              <li><a href="#step6">Step 6: Testing the Setup</a></li>
+              <li><a href="#troubleshooting">Troubleshooting</a></li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Prerequisites -->
+        <div class="card mt-16" id="prerequisites">
+          <div class="card-head">
+            <h3>Prerequisites</h3>
+          </div>
+          <div class="card-body docs-content">
+            <p>Before you begin, ensure you have:</p>
+            <ul>
+              <li>MikroTik router with RouterOS v6.x or v7.x</li>
+              <li>Admin access to MikroTik via WinBox or WebFig</li>
+              <li>Static IP address for the MikroTik router</li>
+              <li>Network connectivity between MikroTik and the RADIUS server</li>
+              <li>Admin access to this Bula WiFi Portal</li>
+            </ul>
+
+            <div class="docs-info">
+              <strong>RADIUS Server Details:</strong>
+              <table class="table table--compact mt-8">
+                <tr>
+                  <td><strong>RADIUS Server IP:</strong></td>
+                  <td><code><%= typeof serverIp !== 'undefined' ? serverIp : 'Your-Server-IP' %></code></td>
+                </tr>
+                <tr>
+                  <td><strong>Authentication Port:</strong></td>
+                  <td><code>1812</code></td>
+                </tr>
+                <tr>
+                  <td><strong>Accounting Port:</strong></td>
+                  <td><code>1813</code></td>
+                </tr>
+                <tr>
+                  <td><strong>Portal URL:</strong></td>
+                  <td><code><%= typeof baseUrl !== 'undefined' ? baseUrl : 'https://your-portal-url.com' %>/portal</code></td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="card mt-16" id="step1">
+          <div class="card-head">
+            <h3>Step 1: Add Device in Portal</h3>
+          </div>
+          <div class="card-body docs-content">
+            <p>First, register your MikroTik router in the Bula WiFi Portal:</p>
+            <ol>
+              <li>Go to <a href="/admin/devices">Devices</a> in the admin panel</li>
+              <li>Click <strong>"Add Device"</strong></li>
+              <li>Fill in the device details:
+                <ul>
+                  <li><strong>Name:</strong> A friendly name (e.g., "Main Router")</li>
+                  <li><strong>IP Address:</strong> MikroTik's IP address</li>
+                  <li><strong>Short Name:</strong> A short identifier (e.g., "main-router")</li>
+                  <li><strong>RADIUS Secret:</strong> Create a strong secret key (you'll use this in MikroTik)</li>
+                  <li><strong>Vendor:</strong> Select "MikroTik"</li>
+                </ul>
+              </li>
+              <li>Click <strong>"Save"</strong></li>
+            </ol>
+            <div class="docs-warning">
+              <strong>Important:</strong> Save the RADIUS Secret securely. You'll need it for MikroTik configuration.
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="card mt-16" id="step2">
+          <div class="card-head">
+            <h3>Step 2: Configure RADIUS Client on MikroTik</h3>
+          </div>
+          <div class="card-body docs-content">
+            <p>Open WinBox or WebFig and configure RADIUS:</p>
+
+            <h4>Via WinBox/WebFig GUI:</h4>
+            <ol>
+              <li>Go to <strong>RADIUS</strong> menu</li>
+              <li>Click <strong>"+"</strong> to add new RADIUS server</li>
+              <li>Configure:
+                <ul>
+                  <li><strong>Service:</strong> Check <code>hotspot</code></li>
+                  <li><strong>Address:</strong> <code><%= typeof serverIp !== 'undefined' ? serverIp : 'Your-RADIUS-Server-IP' %></code></li>
+                  <li><strong>Secret:</strong> The secret you created in Step 1</li>
+                  <li><strong>Authentication Port:</strong> <code>1812</code></li>
+                  <li><strong>Accounting Port:</strong> <code>1813</code></li>
+                  <li><strong>Timeout:</strong> <code>3000ms</code></li>
+                </ul>
+              </li>
+              <li>Click <strong>"OK"</strong></li>
+            </ol>
+
+            <h4>Via Terminal:</h4>
+            <pre class="docs-code">/radius add service=hotspot address=<%= typeof serverIp !== 'undefined' ? serverIp : 'YOUR-RADIUS-SERVER-IP' %> secret=YOUR-RADIUS-SECRET authentication-port=1812 accounting-port=1813 timeout=3000ms</pre>
+
+            <h4>Enable RADIUS for Hotspot:</h4>
+            <pre class="docs-code">/radius incoming set accept=yes</pre>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="card mt-16" id="step3">
+          <div class="card-head">
+            <h3>Step 3: Configure Hotspot Server</h3>
+          </div>
+          <div class="card-body docs-content">
+            <p>Set up the Hotspot server on your MikroTik:</p>
+
+            <h4>Via WinBox/WebFig GUI:</h4>
+            <ol>
+              <li>Go to <strong>IP > Hotspot</strong></li>
+              <li>Click <strong>"Hotspot Setup"</strong> wizard</li>
+              <li>Select the interface for hotspot (e.g., bridge or wlan)</li>
+              <li>Set the local network address</li>
+              <li>Set address pool for clients</li>
+              <li>Select certificate (or none for HTTP)</li>
+              <li>Set SMTP server (or 0.0.0.0)</li>
+              <li>Set DNS servers</li>
+              <li>Set DNS name (e.g., hotspot.local)</li>
+              <li>Complete the wizard</li>
+            </ol>
+
+            <h4>Configure Hotspot Server Profile for RADIUS:</h4>
+            <ol>
+              <li>Go to <strong>IP > Hotspot > Server Profiles</strong></li>
+              <li>Double-click your profile (usually "hsprof1")</li>
+              <li>Go to <strong>"RADIUS"</strong> tab</li>
+              <li>Check:
+                <ul>
+                  <li><code>Use RADIUS</code></li>
+                  <li><code>Accounting</code></li>
+                  <li><code>Interim Update</code> (set to 5 minutes)</li>
+                </ul>
+              </li>
+              <li>Go to <strong>"Login"</strong> tab</li>
+              <li>Set <strong>Login By:</strong> Check <code>HTTP CHAP</code> and <code>HTTP PAP</code></li>
+              <li>Click <strong>"OK"</strong></li>
+            </ol>
+
+            <h4>Via Terminal:</h4>
+            <pre class="docs-code">/ip hotspot profile set hsprof1 use-radius=yes radius-accounting=yes radius-interim-update=5m login-by=http-chap,http-pap</pre>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="card mt-16" id="step4">
+          <div class="card-head">
+            <h3>Step 4: Configure Walled Garden</h3>
+          </div>
+          <div class="card-body docs-content">
+            <p>Allow access to the captive portal before authentication:</p>
+
+            <h4>Via WinBox/WebFig GUI:</h4>
+            <ol>
+              <li>Go to <strong>IP > Hotspot > Walled Garden</strong></li>
+              <li>Add entries for the portal domain:</li>
+            </ol>
+
+            <h4>Via Terminal:</h4>
+            <pre class="docs-code"># Allow portal domain
+/ip hotspot walled-garden add dst-host=<%= typeof portalDomain !== 'undefined' ? portalDomain : 'bula.prosystemsug.com' %> action=allow
+
+# Allow Flutterwave payment gateway
+/ip hotspot walled-garden add dst-host=*.flutterwave.com action=allow
+/ip hotspot walled-garden add dst-host=flutterwave.com action=allow
+/ip hotspot walled-garden add dst-host=checkout.flutterwave.com action=allow
+/ip hotspot walled-garden add dst-host=api.flutterwave.com action=allow
+
+# Allow IP-based access (Walled Garden IP)
+/ip hotspot walled-garden ip add dst-address=<%= typeof serverIp !== 'undefined' ? serverIp : 'YOUR-SERVER-IP' %>/32 action=accept</pre>
+
+            <div class="docs-info">
+              <strong>Note:</strong> The walled garden allows users to access the payment portal before they authenticate, so they can purchase WiFi plans.
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="card mt-16" id="step5">
+          <div class="card-head">
+            <h3>Step 5: Customize Login Page (Redirect to Portal)</h3>
+          </div>
+          <div class="card-body docs-content">
+            <p>Configure MikroTik to redirect users to your captive portal:</p>
+
+            <h4>Option A: External Portal Redirect (Recommended)</h4>
+            <ol>
+              <li>Go to <strong>IP > Hotspot > Server Profiles</strong></li>
+              <li>Edit your profile</li>
+              <li>Go to <strong>"Login"</strong> tab</li>
+              <li>Set <strong>Login Page:</strong> to your portal URL with MikroTik variables</li>
+            </ol>
+
+            <h4>Via Terminal:</h4>
+            <pre class="docs-code">/ip hotspot profile set hsprof1 login-by=http-chap,http-pap html-directory=hotspot html-directory-override=true</pre>
+
+            <h4>Edit the Hotspot Login Page:</h4>
+            <p>Modify the <code>login.html</code> file in the hotspot directory to redirect to the portal:</p>
+            <pre class="docs-code">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;meta http-equiv="refresh" content="0;url=<%= typeof baseUrl !== 'undefined' ? baseUrl : 'https://your-portal-url.com' %>/portal?link-login=$(link-login-only)&amp;link-orig=$(link-orig)&amp;mac=$(mac)&amp;ip=$(ip)&amp;username=$(username)&amp;error=$(error)"&gt;
+  &lt;title&gt;Redirecting...&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;p&gt;Redirecting to WiFi Portal...&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+
+            <div class="docs-info">
+              <strong>MikroTik Variables:</strong>
+              <ul>
+                <li><code>$(link-login-only)</code> - URL for login submission</li>
+                <li><code>$(link-orig)</code> - Original URL the user was trying to access</li>
+                <li><code>$(mac)</code> - Client MAC address</li>
+                <li><code>$(ip)</code> - Client IP address</li>
+                <li><code>$(username)</code> - Username (if already entered)</li>
+                <li><code>$(error)</code> - Error message (if login failed)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 6 -->
+        <div class="card mt-16" id="step6">
+          <div class="card-head">
+            <h3>Step 6: Testing the Setup</h3>
+          </div>
+          <div class="card-body docs-content">
+            <h4>Test RADIUS Connectivity:</h4>
+            <ol>
+              <li>In MikroTik terminal, run:
+                <pre class="docs-code">/radius monitor numbers=0</pre>
+              </li>
+              <li>Check if requests are being sent and responses received</li>
+            </ol>
+
+            <h4>Test Hotspot Login:</h4>
+            <ol>
+              <li>Connect a device to the hotspot WiFi</li>
+              <li>Open a browser - you should be redirected to the portal</li>
+              <li>Either:
+                <ul>
+                  <li>Enter an existing voucher code and click "Connect Now"</li>
+                  <li>Or purchase a new plan via Flutterwave</li>
+                </ul>
+              </li>
+              <li>After successful authentication, you should have internet access</li>
+            </ol>
+
+            <h4>Verify in Portal:</h4>
+            <ol>
+              <li>Go to <a href="/admin/devices">Devices</a> and check if the device shows as "Online"</li>
+              <li>Go to <a href="/admin/orders">Orders</a> to see payment transactions</li>
+              <li>Check the Dashboard for active users count</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Troubleshooting -->
+        <div class="card mt-16" id="troubleshooting">
+          <div class="card-head">
+            <h3>Troubleshooting</h3>
+          </div>
+          <div class="card-body docs-content">
+            <h4>Common Issues:</h4>
+
+            <div class="docs-issue">
+              <strong>Problem:</strong> RADIUS timeout / no response
+              <ul>
+                <li>Check firewall rules on both MikroTik and server</li>
+                <li>Verify RADIUS server IP is correct</li>
+                <li>Ensure ports 1812 and 1813 are open (UDP)</li>
+                <li>Check the RADIUS secret matches exactly</li>
+              </ul>
+            </div>
+
+            <div class="docs-issue">
+              <strong>Problem:</strong> Users can't access payment page
+              <ul>
+                <li>Check Walled Garden configuration</li>
+                <li>Add the portal domain to walled garden</li>
+                <li>Add Flutterwave domains to walled garden</li>
+              </ul>
+            </div>
+
+            <div class="docs-issue">
+              <strong>Problem:</strong> Login fails with valid voucher
+              <ul>
+                <li>Check if voucher is activated in RADIUS</li>
+                <li>Verify the voucher status is "ACTIVE" in the portal</li>
+                <li>Check RADIUS logs: <code>tail -f /var/log/freeradius/radius.log</code></li>
+              </ul>
+            </div>
+
+            <div class="docs-issue">
+              <strong>Problem:</strong> Speed limits not working
+              <ul>
+                <li>Ensure MikroTik is receiving RADIUS attributes</li>
+                <li>Check rate-limit attributes in FreeRADIUS</li>
+                <li>Verify the plan has speed limits configured</li>
+              </ul>
+            </div>
+
+            <h4>Useful MikroTik Commands:</h4>
+            <pre class="docs-code"># Check RADIUS status
+/radius monitor numbers=0
+
+# View active hotspot users
+/ip hotspot active print
+
+# Check hotspot hosts
+/ip hotspot host print
+
+# View RADIUS requests
+/radius print
+
+# Debug RADIUS
+/system logging add topics=radius action=memory</pre>
+
+            <h4>Need Help?</h4>
+            <p>If you're still having issues, contact support with:</p>
+            <ul>
+              <li>MikroTik model and RouterOS version</li>
+              <li>Screenshot of RADIUS configuration</li>
+              <li>RADIUS logs from both MikroTik and server</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .docs-toc {
+      background: var(--bg);
+      padding: 16px 24px;
+      border-radius: var(--radius-sm);
+    }
+    .docs-toc ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .docs-toc li {
+      margin: 8px 0;
+    }
+    .docs-toc a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .docs-toc a:hover {
+      text-decoration: underline;
+    }
+    .docs-content {
+      line-height: 1.7;
+    }
+    .docs-content h4 {
+      margin-top: 24px;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+    .docs-content p {
+      margin-bottom: 16px;
+    }
+    .docs-content ul, .docs-content ol {
+      margin-bottom: 16px;
+      padding-left: 24px;
+    }
+    .docs-content li {
+      margin: 8px 0;
+    }
+    .docs-code {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.875rem;
+      margin: 12px 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .docs-info {
+      background: #dbeafe;
+      border: 1px solid #93c5fd;
+      color: #1e40af;
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      margin: 16px 0;
+    }
+    .docs-warning {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      color: #92400e;
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      margin: 16px 0;
+    }
+    .docs-issue {
+      background: var(--bg);
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      margin: 16px 0;
+      border-left: 4px solid var(--primary);
+    }
+    .docs-issue strong {
+      color: var(--text);
+    }
+    .docs-issue ul {
+      margin-top: 8px;
+      margin-bottom: 0;
+    }
+    .table--compact {
+      font-size: 0.875rem;
+    }
+    .table--compact td {
+      padding: 8px 12px;
+    }
+    code {
+      background: var(--bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.875rem;
+    }
+  </style>
+
+  <script src="/js/app.js?v=<%= assetVersion || '' %>"></script>
+</body>
+</html>
