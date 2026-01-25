@@ -19,6 +19,32 @@
 
         <div class="grid grid--4">
           <div class="card card--stat">
+            <div class="card-title">Total Users</div>
+            <div class="card-value"><%= c.totalUsers || 0 %></div>
+            <div class="card-sub">Registered customers</div>
+          </div>
+
+          <div class="card card--stat card--highlight">
+            <div class="card-title">Active Users</div>
+            <div class="card-value"><%= c.activeUsers || 0 %></div>
+            <div class="card-sub">Currently online</div>
+          </div>
+
+          <div class="card card--stat">
+            <div class="card-title">Daily Sales</div>
+            <div class="card-value">UGX <%= (c.dailySales || 0).toLocaleString() %></div>
+            <div class="card-sub">Today's revenue</div>
+          </div>
+
+          <div class="card card--stat">
+            <div class="card-title">MTD Sales</div>
+            <div class="card-value">UGX <%= (c.mtdSales || 0).toLocaleString() %></div>
+            <div class="card-sub">Month to date</div>
+          </div>
+        </div>
+
+        <div class="grid grid--4 mt-16">
+          <div class="card card--stat">
             <div class="card-title">Orders</div>
             <div class="card-value"><%= c.orders || 0 %></div>
             <div class="card-sub">Total orders</div>

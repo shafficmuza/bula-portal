@@ -63,10 +63,22 @@ router.get("/logout", (req, res) => {
 
 // Dashboard
 router.get("/", requireAdmin, async (req, res) => {
-  const safeCount = async (sql, params=[]) => {
+  const radiusDB = require("../config/db.radius");
+
+  const safeCount = async (sql, params=[], db=portalDB) => {
     try {
-      const [[row]] = await portalDB.query(sql, params);
+      const [[row]] = await db.query(sql, params);
       const val = row && (row.c ?? Object.values(row)[0]);
+      return Number(val || 0);
+    } catch (e) {
+      return 0;
+    }
+  };
+
+  const safeSum = async (sql, params=[], db=portalDB) => {
+    try {
+      const [[row]] = await db.query(sql, params);
+      const val = row && (row.total ?? Object.values(row)[0]);
       return Number(val || 0);
     } catch (e) {
       return 0;
@@ -80,6 +92,19 @@ router.get("/", requireAdmin, async (req, res) => {
     ),
     vouchers: await safeCount("SELECT COUNT(*) AS c FROM vouchers WHERE status='ACTIVE'"),
     plans: await safeCount("SELECT COUNT(*) AS c FROM plans WHERE is_active=1"),
+    // New statistics
+    totalUsers: await safeCount("SELECT COUNT(*) AS c FROM customers"),
+    activeUsers: await safeCount(
+      "SELECT COUNT(DISTINCT username) AS c FROM radacct WHERE acctstoptime IS NULL",
+      [],
+      radiusDB
+    ),
+    dailySales: await safeSum(
+      "SELECT COALESCE(SUM(amount_ugx), 0) AS total FROM orders WHERE DATE(paid_at) = CURDATE() AND (status IN ('PAID','SUCCESS','COMPLETED') OR paid_at IS NOT NULL)"
+    ),
+    mtdSales: await safeSum(
+      "SELECT COALESCE(SUM(amount_ugx), 0) AS total FROM orders WHERE MONTH(paid_at) = MONTH(CURDATE()) AND YEAR(paid_at) = YEAR(CURDATE()) AND (status IN ('PAID','SUCCESS','COMPLETED') OR paid_at IS NOT NULL)"
+    ),
   };
 
   let recentOrders = [];
