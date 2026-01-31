@@ -526,6 +526,20 @@
   <script>
     let selectedPlan = null;
 
+    // MikroTik hotspot parameters (passed from server)
+    const customerMac = '<%= customerMac || "" %>';
+    const customerIp = '<%= customerIp || "" %>';
+    const linkLogin = '<%= linkLogin || "" %>';
+    const linkOrig = '<%= linkOrig || "" %>';
+
+    // Store for later use (e.g., after payment success)
+    if (linkLogin) {
+      localStorage.setItem('hotspot_login_url', linkLogin);
+    }
+    if (customerMac) {
+      localStorage.setItem('customer_mac', customerMac);
+    }
+
     // Load plans
     async function loadPlans() {
       try {
@@ -639,7 +653,13 @@
         const response = await fetch('/api/payments/flutterwave/init', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ msisdn, planCode: selectedPlan.code })
+          body: JSON.stringify({
+            msisdn,
+            planCode: selectedPlan.code,
+            customerMac: customerMac || localStorage.getItem('customer_mac') || null,
+            customerIp: customerIp || null,
+            linkLogin: linkLogin || localStorage.getItem('hotspot_login_url') || null
+          })
         });
 
         const data = await response.json();

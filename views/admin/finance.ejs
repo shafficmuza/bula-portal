@@ -1,0 +1,829 @@
+<%- include("../partials/head", { title: "Bula Admin - Finance", assetVersion }) %>
+
+<body>
+  <div class="app">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <%- include("../partials/sidebar", { activeMenu: "finance" }) %>
+
+    <div class="main">
+      <%- include("../partials/topbar", { admin }) %>
+
+      <div class="content">
+        <div class="page-title">
+          <h2>Finance</h2>
+          <div class="muted">Track payments, revenue, and withdrawals</div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid--4" id="summaryCards">
+          <div class="card card--stat card--highlight">
+            <div class="card-title">Available Balance</div>
+            <div class="card-value" id="availableBalance">Loading...</div>
+            <div class="card-sub">Net balance</div>
+          </div>
+
+          <div class="card card--stat">
+            <div class="card-title">Total Revenue</div>
+            <div class="card-value" id="totalRevenue">Loading...</div>
+            <div class="card-sub">All time</div>
+          </div>
+
+          <div class="card card--stat">
+            <div class="card-title">Monthly Revenue</div>
+            <div class="card-value" id="monthlyRevenue">Loading...</div>
+            <div class="card-sub">This month</div>
+          </div>
+
+          <div class="card card--stat">
+            <div class="card-title">Daily Revenue</div>
+            <div class="card-value" id="dailyRevenue">Loading...</div>
+            <div class="card-sub">Today</div>
+          </div>
+        </div>
+
+        <div class="grid grid--4 mt-16">
+          <div class="card card--stat">
+            <div class="card-title">Pending Payments</div>
+            <div class="card-value" id="pendingPayments">Loading...</div>
+            <div class="card-sub">Awaiting confirmation</div>
+          </div>
+
+          <div class="card card--stat">
+            <div class="card-title">Total Transactions</div>
+            <div class="card-value" id="totalTransactions">Loading...</div>
+            <div class="card-sub">Successful payments</div>
+          </div>
+
+          <div class="card card--stat">
+            <div class="card-title">Total Withdrawn</div>
+            <div class="card-value" id="totalWithdrawn">Loading...</div>
+            <div class="card-sub">Completed withdrawals</div>
+          </div>
+
+          <div class="card card--stat">
+            <div class="card-title">Pending Withdrawals</div>
+            <div class="card-value" id="pendingWithdrawals">Loading...</div>
+            <div class="card-sub">In processing</div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs mt-24">
+          <button class="tab-btn active" data-tab="payments">Payment Transactions</button>
+          <button class="tab-btn" data-tab="withdrawals">Withdrawals</button>
+        </div>
+
+        <!-- Payments Tab -->
+        <div class="tab-content active" id="tab-payments">
+          <div class="card">
+            <div class="card-head">
+              <h3>Payment Transactions</h3>
+              <div class="card-actions">
+                <button class="btn btn--sm" onclick="exportPayments()">
+                  <i data-lucide="download"></i> Export CSV
+                </button>
+              </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters">
+              <div class="filter-group">
+                <label>Provider</label>
+                <select id="filterProvider" onchange="loadPayments()">
+                  <option value="">All Providers</option>
+                  <option value="FLUTTERWAVE">Flutterwave</option>
+                  <option value="YOPAYMENTS">Yo Payments</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>Status</label>
+                <select id="filterStatus" onchange="loadPayments()">
+                  <option value="">All Statuses</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="PAID">Paid</option>
+                  <option value="FAILED">Failed</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>From Date</label>
+                <input type="date" id="filterDateFrom" onchange="loadPayments()">
+              </div>
+              <div class="filter-group">
+                <label>To Date</label>
+                <input type="date" id="filterDateTo" onchange="loadPayments()">
+              </div>
+              <div class="filter-group">
+                <button class="btn btn--sm" onclick="clearFilters()">Clear Filters</button>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table class="table" id="paymentsTable">
+                <thead>
+                  <tr>
+                    <th>Reference</th>
+                    <th>Provider</th>
+                    <th>Customer</th>
+                    <th>Plan</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody id="paymentsBody">
+                  <tr><td colspan="7" class="text-center muted">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination" id="paymentsPagination"></div>
+          </div>
+        </div>
+
+        <!-- Withdrawals Tab -->
+        <div class="tab-content" id="tab-withdrawals">
+          <div class="card">
+            <div class="card-head">
+              <h3>Withdrawals</h3>
+              <div class="card-actions">
+                <button class="btn btn--primary" onclick="showWithdrawalModal()">
+                  <i data-lucide="plus"></i> New Withdrawal
+                </button>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table class="table" id="withdrawalsTable">
+                <thead>
+                  <tr>
+                    <th>Reference</th>
+                    <th>Amount</th>
+                    <th>Destination</th>
+                    <th>Status</th>
+                    <th>Requested By</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="withdrawalsBody">
+                  <tr><td colspan="7" class="text-center muted">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination" id="withdrawalsPagination"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Withdrawal Modal -->
+  <div class="modal" id="withdrawalModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Request Withdrawal</h3>
+        <button class="modal-close" onclick="closeWithdrawalModal()">&times;</button>
+      </div>
+      <form id="withdrawalForm" onsubmit="submitWithdrawal(event)">
+        <div class="form-group">
+          <label for="withdrawAmount">Amount (UGX)</label>
+          <input type="number" id="withdrawAmount" name="amount" min="1000" required>
+          <p class="form-help">Available balance: <span id="modalAvailableBalance">0</span> UGX</p>
+        </div>
+
+        <div class="form-group">
+          <label for="destinationType">Destination Type</label>
+          <select id="destinationType" name="destination_type" required onchange="updateDestinationFields()">
+            <option value="mobile_money">Mobile Money</option>
+            <option value="bank_account">Bank Account</option>
+          </select>
+        </div>
+
+        <div id="mobileMoneyFields">
+          <div class="form-group">
+            <label for="mmNetwork">Network</label>
+            <select id="mmNetwork" name="network">
+              <option value="MTN">MTN</option>
+              <option value="AIRTEL">Airtel</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="mmNumber">Phone Number</label>
+            <input type="tel" id="mmNumber" name="phone_number" placeholder="256XXXXXXXXX">
+          </div>
+          <div class="form-group">
+            <label for="mmName">Account Name</label>
+            <input type="text" id="mmName" name="account_name" placeholder="Registered name">
+          </div>
+        </div>
+
+        <div id="bankFields" style="display: none;">
+          <div class="form-group">
+            <label for="bankName">Bank Name</label>
+            <input type="text" id="bankName" name="bank_name" placeholder="Bank name">
+          </div>
+          <div class="form-group">
+            <label for="accountNumber">Account Number</label>
+            <input type="text" id="accountNumber" name="account_number" placeholder="Account number">
+          </div>
+          <div class="form-group">
+            <label for="accountName">Account Name</label>
+            <input type="text" id="accountName" name="account_name_bank" placeholder="Account holder name">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="withdrawNotes">Notes (optional)</label>
+          <textarea id="withdrawNotes" name="notes" rows="2"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn" onclick="closeWithdrawalModal()">Cancel</button>
+          <button type="submit" class="btn btn--primary">Submit Request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <style>
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    .tab-btn {
+      padding: 10px 20px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn:hover {
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .filter-group label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .filter-group select,
+    .filter-group input {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      background: var(--white);
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px 0;
+    }
+
+    .pagination button {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+
+    .pagination button:hover:not(:disabled) {
+      background: var(--bg);
+    }
+
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .pagination button.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    .badge.paid, .badge.success, .badge.completed {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge.pending, .badge.processing {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge.failed, .badge.cancelled {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--white);
+      border-radius: var(--radius);
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h3 {
+      margin: 0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .modal-content form {
+      padding: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9375rem;
+    }
+
+    .form-help {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      margin-top: 16px;
+    }
+
+    .mt-24 {
+      margin-top: 24px;
+    }
+
+    .btn--sm {
+      padding: 6px 12px;
+      font-size: 0.8125rem;
+    }
+
+    .btn-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn--xs {
+      padding: 4px 8px;
+      font-size: 0.75rem;
+    }
+  </style>
+
+  <script src="/js/app.js?v=<%= assetVersion || '' %>"></script>
+  <script>
+    let currentPaymentPage = 1;
+    let currentWithdrawalPage = 1;
+    let summaryData = {};
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Load summary data
+    async function loadSummary() {
+      try {
+        const response = await fetch('/admin/api/finance/summary');
+        const result = await response.json();
+        if (result.ok) {
+          summaryData = result.summary;
+          document.getElementById('availableBalance').textContent = `UGX ${formatNumber(result.summary.availableBalance)}`;
+          document.getElementById('totalRevenue').textContent = `UGX ${formatNumber(result.summary.totalRevenue)}`;
+          document.getElementById('monthlyRevenue').textContent = `UGX ${formatNumber(result.summary.monthlyRevenue)}`;
+          document.getElementById('dailyRevenue').textContent = `UGX ${formatNumber(result.summary.dailyRevenue)}`;
+          document.getElementById('pendingPayments').textContent = `UGX ${formatNumber(result.summary.pendingPayments)}`;
+          document.getElementById('totalTransactions').textContent = formatNumber(result.summary.totalTransactions);
+          document.getElementById('totalWithdrawn').textContent = `UGX ${formatNumber(result.summary.totalWithdrawn)}`;
+          document.getElementById('pendingWithdrawals').textContent = `UGX ${formatNumber(result.summary.pendingWithdrawals)}`;
+          document.getElementById('modalAvailableBalance').textContent = formatNumber(result.summary.availableBalance);
+        }
+      } catch (e) {
+        console.error('Error loading summary:', e);
+      }
+    }
+
+    // Load payments
+    async function loadPayments(page = 1) {
+      currentPaymentPage = page;
+      const provider = document.getElementById('filterProvider').value;
+      const status = document.getElementById('filterStatus').value;
+      const dateFrom = document.getElementById('filterDateFrom').value;
+      const dateTo = document.getElementById('filterDateTo').value;
+
+      let url = `/admin/api/finance/payments?page=${page}&limit=20`;
+      if (provider) url += `&provider=${provider}`;
+      if (status) url += `&status=${status}`;
+      if (dateFrom) url += `&date_from=${dateFrom}`;
+      if (dateTo) url += `&date_to=${dateTo}`;
+
+      try {
+        const response = await fetch(url);
+        const result = await response.json();
+
+        if (result.ok) {
+          renderPayments(result.payments);
+          renderPagination('paymentsPagination', result.pagination, loadPayments);
+        }
+      } catch (e) {
+        console.error('Error loading payments:', e);
+      }
+    }
+
+    // Render payments table
+    function renderPayments(payments) {
+      const tbody = document.getElementById('paymentsBody');
+
+      if (!payments || payments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center muted">No payments found</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = payments.map(p => `
+        <tr>
+          <td><code>${p.transaction_ref || '-'}</code></td>
+          <td>${p.provider_code || '-'}</td>
+          <td>${p.customer_msisdn || '-'}</td>
+          <td>${p.plan_name || '-'}</td>
+          <td>UGX ${formatNumber(p.amount || 0)}</td>
+          <td><span class="badge ${(p.status || '').toLowerCase()}">${p.status || '-'}</span></td>
+          <td>${formatDate(p.initiated_at)}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Load withdrawals
+    async function loadWithdrawals(page = 1) {
+      currentWithdrawalPage = page;
+
+      try {
+        const response = await fetch(`/admin/api/finance/withdrawals?page=${page}&limit=20`);
+        const result = await response.json();
+
+        if (result.ok) {
+          renderWithdrawals(result.withdrawals);
+          renderPagination('withdrawalsPagination', result.pagination, loadWithdrawals);
+        }
+      } catch (e) {
+        console.error('Error loading withdrawals:', e);
+      }
+    }
+
+    // Render withdrawals table
+    function renderWithdrawals(withdrawals) {
+      const tbody = document.getElementById('withdrawalsBody');
+
+      if (!withdrawals || withdrawals.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center muted">No withdrawals found</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = withdrawals.map(w => {
+        const details = w.destination_details || {};
+        let destination = w.destination_type === 'mobile_money'
+          ? `${details.network || ''} - ${details.phone_number || ''}`
+          : `${details.bank_name || ''} - ${details.account_number || ''}`;
+
+        const canApprove = w.status === 'pending' && '<%= admin?.role %>' === 'SUPER_ADMIN';
+
+        return `
+          <tr>
+            <td><code>${w.withdrawal_ref}</code></td>
+            <td>UGX ${formatNumber(w.amount)}</td>
+            <td>${destination}</td>
+            <td><span class="badge ${w.status}">${w.status}</span></td>
+            <td>${w.requested_by_name || w.requested_by_email || '-'}</td>
+            <td>${formatDate(w.requested_at)}</td>
+            <td>
+              ${canApprove ? `
+                <div class="btn-actions">
+                  <button class="btn btn--xs btn--primary" onclick="updateWithdrawalStatus(${w.id}, 'processing')">Approve</button>
+                  <button class="btn btn--xs btn--danger" onclick="updateWithdrawalStatus(${w.id}, 'cancelled')">Reject</button>
+                </div>
+              ` : (w.status === 'processing' && '<%= admin?.role %>' === 'SUPER_ADMIN' ? `
+                <div class="btn-actions">
+                  <button class="btn btn--xs btn--primary" onclick="updateWithdrawalStatus(${w.id}, 'completed')">Complete</button>
+                  <button class="btn btn--xs btn--danger" onclick="updateWithdrawalStatus(${w.id}, 'failed')">Failed</button>
+                </div>
+              ` : '-')}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Render pagination
+    function renderPagination(elementId, pagination, callback) {
+      const container = document.getElementById(elementId);
+      if (!pagination || pagination.pages <= 1) {
+        container.innerHTML = '';
+        return;
+      }
+
+      let html = '';
+      html += `<button onclick="${callback.name}(${pagination.page - 1})" ${pagination.page <= 1 ? 'disabled' : ''}>Prev</button>`;
+
+      for (let i = 1; i <= pagination.pages; i++) {
+        if (i === 1 || i === pagination.pages || (i >= pagination.page - 2 && i <= pagination.page + 2)) {
+          html += `<button class="${i === pagination.page ? 'active' : ''}" onclick="${callback.name}(${i})">${i}</button>`;
+        } else if (i === pagination.page - 3 || i === pagination.page + 3) {
+          html += '<span>...</span>';
+        }
+      }
+
+      html += `<button onclick="${callback.name}(${pagination.page + 1})" ${pagination.page >= pagination.pages ? 'disabled' : ''}>Next</button>`;
+      container.innerHTML = html;
+    }
+
+    // Clear filters
+    function clearFilters() {
+      document.getElementById('filterProvider').value = '';
+      document.getElementById('filterStatus').value = '';
+      document.getElementById('filterDateFrom').value = '';
+      document.getElementById('filterDateTo').value = '';
+      loadPayments(1);
+    }
+
+    // Export payments
+    function exportPayments() {
+      const provider = document.getElementById('filterProvider').value;
+      const status = document.getElementById('filterStatus').value;
+      const dateFrom = document.getElementById('filterDateFrom').value;
+      const dateTo = document.getElementById('filterDateTo').value;
+
+      let url = '/admin/api/finance/payments/export?';
+      if (provider) url += `provider=${provider}&`;
+      if (status) url += `status=${status}&`;
+      if (dateFrom) url += `date_from=${dateFrom}&`;
+      if (dateTo) url += `date_to=${dateTo}&`;
+
+      window.location.href = url;
+    }
+
+    // Withdrawal modal
+    function showWithdrawalModal() {
+      document.getElementById('modalAvailableBalance').textContent = formatNumber(summaryData.availableBalance || 0);
+      document.getElementById('withdrawalModal').classList.add('show');
+    }
+
+    function closeWithdrawalModal() {
+      document.getElementById('withdrawalModal').classList.remove('show');
+      document.getElementById('withdrawalForm').reset();
+    }
+
+    function updateDestinationFields() {
+      const type = document.getElementById('destinationType').value;
+      document.getElementById('mobileMoneyFields').style.display = type === 'mobile_money' ? 'block' : 'none';
+      document.getElementById('bankFields').style.display = type === 'bank_account' ? 'block' : 'none';
+    }
+
+    async function submitWithdrawal(e) {
+      e.preventDefault();
+
+      const form = e.target;
+      const amount = parseFloat(form.amount.value);
+      const destinationType = form.destination_type.value;
+      const notes = form.notes.value;
+
+      let destinationDetails = {};
+      if (destinationType === 'mobile_money') {
+        destinationDetails = {
+          network: form.network.value,
+          phone_number: form.phone_number.value,
+          account_name: form.account_name.value
+        };
+      } else {
+        destinationDetails = {
+          bank_name: form.bank_name.value,
+          account_number: form.account_number.value,
+          account_name: form.account_name_bank.value
+        };
+      }
+
+      try {
+        const response = await fetch('/admin/api/finance/withdrawals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount,
+            destination_type: destinationType,
+            destination_details: destinationDetails,
+            notes
+          })
+        });
+
+        const result = await response.json();
+        if (result.ok) {
+          showToast('Withdrawal request submitted');
+          closeWithdrawalModal();
+          loadWithdrawals();
+          loadSummary();
+        } else {
+          showToast(result.message || 'Failed to submit withdrawal', 'error');
+        }
+      } catch (e) {
+        showToast('Error submitting withdrawal', 'error');
+      }
+    }
+
+    async function updateWithdrawalStatus(id, status) {
+      const confirmMsg = status === 'processing' ? 'Approve this withdrawal?' :
+                         status === 'completed' ? 'Mark this withdrawal as completed?' :
+                         status === 'cancelled' ? 'Reject this withdrawal?' :
+                         status === 'failed' ? 'Mark this withdrawal as failed?' : 'Update status?';
+
+      if (!confirm(confirmMsg)) return;
+
+      try {
+        const response = await fetch(`/admin/api/finance/withdrawals/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+
+        const result = await response.json();
+        if (result.ok) {
+          showToast(`Withdrawal ${status}`);
+          loadWithdrawals();
+          loadSummary();
+        } else {
+          showToast(result.message || 'Failed to update withdrawal', 'error');
+        }
+      } catch (e) {
+        showToast('Error updating withdrawal', 'error');
+      }
+    }
+
+    // Utility functions
+    function formatNumber(num) {
+      return new Intl.NumberFormat('en-UG').format(num || 0);
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      return new Date(dateStr).toLocaleDateString('en-UG', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = 'toast toast--' + type;
+      toast.textContent = message;
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background: ${type === 'error' ? '#991b1b' : '#0ea56b'};
+        color: white;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        z-index: 1001;
+        animation: slideIn 0.3s ease;
+      `;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Add animation styles
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Initialize
+    loadSummary();
+    loadPayments();
+    loadWithdrawals();
+  </script>
+</body>
+</html>

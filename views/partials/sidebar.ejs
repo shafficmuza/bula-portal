@@ -40,6 +40,11 @@
       Locations
     </a>
 
+    <a class="nav__item <%= cur==='finance'?'is-active':'' %>" href="/admin/finance">
+      <i data-lucide="wallet"></i>
+      Finance
+    </a>
+
     <% if (typeof admin !== 'undefined' && admin.role === 'SUPER_ADMIN') { %>
     <a class="nav__item <%= cur==='users'?'is-active':'' %>" href="/admin/users">
       <i data-lucide="users"></i>

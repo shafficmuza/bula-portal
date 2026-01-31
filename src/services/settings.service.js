@@ -60,6 +60,13 @@ function getDefaultSettings() {
     support_phone: null,
     support_email: null,
     support_hours: null,
+    // MikroTik settings
+    mikrotik_enabled: false,
+    mikrotik_host: null,
+    mikrotik_port: 8728,
+    mikrotik_username: null,
+    mikrotik_password: null,
+    mikrotik_hotspot_server: null,
   };
 }
 
@@ -96,6 +103,13 @@ async function updateSettings(data) {
     "support_phone",
     "support_email",
     "support_hours",
+    // MikroTik settings
+    "mikrotik_enabled",
+    "mikrotik_host",
+    "mikrotik_port",
+    "mikrotik_username",
+    "mikrotik_password",
+    "mikrotik_hotspot_server",
   ];
 
   // Filter only allowed fields

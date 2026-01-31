@@ -8,6 +8,8 @@ const requireAdmin = require("../middleware/requireAdmin");
 const { activateVoucher } = require("../services/radius.service");
 const deviceService = require("../services/device.service");
 const settingsService = require("../services/settings.service");
+const paymentProviderService = require("../services/payment-provider.service");
+const mikrotikService = require("../services/mikrotik.service");
 
 const router = express.Router();
 const ASSET_VERSION = Date.now();
@@ -154,6 +156,11 @@ router.get("/vouchers", requireAdmin, async (req, res) => {
 router.get("/settings", requireAdmin, async (req, res) => {
   const settings = await settingsService.getSettings();
   res.render("admin/settings", { admin: req.session.admin, assetVersion: ASSET_VERSION, settings });
+});
+
+// Finance page
+router.get("/finance", requireAdmin, async (req, res) => {
+  res.render("admin/finance", { admin: req.session.admin, assetVersion: ASSET_VERSION });
 });
 
 // Documentation page
@@ -1576,6 +1583,627 @@ router.post("/api/settings/reset", requireAdmin, requireSuperAdmin, async (req, 
     res.json({ ok: true, message: "Settings reset to defaults", settings });
   } catch (e) {
     console.error("Reset settings error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// ============ PAYMENT PROVIDER API ENDPOINTS ============
+
+// Get all payment providers
+router.get("/api/payment-providers", requireAdmin, async (req, res) => {
+  try {
+    const providers = await paymentProviderService.getAllProviders();
+    // Mask sensitive credentials in response
+    const maskedProviders = providers.map(p => ({
+      ...p,
+      credentials: maskCredentials(p.credentials, p.provider_code)
+    }));
+    res.json({ ok: true, providers: maskedProviders });
+  } catch (e) {
+    console.error("Get payment providers error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get single payment provider
+router.get("/api/payment-providers/:code", requireAdmin, async (req, res) => {
+  try {
+    const provider = await paymentProviderService.getProvider(req.params.code);
+    if (!provider) {
+      return res.status(404).json({ ok: false, message: "Provider not found" });
+    }
+    // Mask sensitive credentials
+    const masked = {
+      ...provider,
+      credentials: maskCredentials(provider.credentials, provider.provider_code)
+    };
+    res.json({ ok: true, provider: masked });
+  } catch (e) {
+    console.error("Get payment provider error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Update payment provider
+router.put("/api/payment-providers/:code", requireAdmin, requireSuperAdmin, async (req, res) => {
+  try {
+    const { is_enabled, environment, credentials } = req.body;
+
+    // Validate environment
+    if (environment && !["test", "live"].includes(environment)) {
+      return res.status(400).json({ ok: false, message: "Invalid environment. Use 'test' or 'live'" });
+    }
+
+    // Get current provider to merge credentials
+    const currentProvider = await paymentProviderService.getProvider(req.params.code);
+    if (!currentProvider) {
+      return res.status(404).json({ ok: false, message: "Provider not found" });
+    }
+
+    // Merge credentials (only update fields that are provided and not masked)
+    let updatedCredentials = currentProvider.credentials || {};
+    if (credentials) {
+      for (const [key, value] of Object.entries(credentials)) {
+        // Only update if value is provided and not a masked placeholder
+        if (value !== undefined && value !== null && !String(value).includes("••••")) {
+          updatedCredentials[key] = value;
+        }
+      }
+    }
+
+    const updated = await paymentProviderService.updateProvider(req.params.code, {
+      is_enabled: is_enabled !== undefined ? is_enabled : currentProvider.is_enabled,
+      environment: environment || currentProvider.environment,
+      credentials: updatedCredentials
+    });
+
+    res.json({
+      ok: true,
+      message: "Payment provider updated",
+      provider: {
+        ...updated,
+        credentials: maskCredentials(updated.credentials, updated.provider_code)
+      }
+    });
+  } catch (e) {
+    console.error("Update payment provider error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get enabled payment providers (for portal)
+router.get("/api/payment-providers/enabled/list", requireAdmin, async (req, res) => {
+  try {
+    const providers = await paymentProviderService.getEnabledProviders();
+    res.json({
+      ok: true,
+      providers: providers.map(p => ({
+        provider_code: p.provider_code,
+        display_name: p.display_name,
+        environment: p.environment
+      }))
+    });
+  } catch (e) {
+    console.error("Get enabled providers error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// ============ MIKROTIK API ENDPOINTS ============
+
+// Test MikroTik connection
+router.get("/api/mikrotik/test", requireAdmin, async (req, res) => {
+  try {
+    const result = await mikrotikService.testConnection();
+    res.json({ ok: true, result });
+  } catch (e) {
+    console.error("MikroTik test error:", e);
+    res.json({
+      ok: false,
+      result: {
+        success: false,
+        message: e.message || "Connection test failed"
+      }
+    });
+  }
+});
+
+// Get MikroTik status
+router.get("/api/mikrotik/status", requireAdmin, async (req, res) => {
+  try {
+    const isAvailable = await mikrotikService.isAvailable();
+    const config = await mikrotikService.getConfig();
+
+    res.json({
+      ok: true,
+      available: isAvailable,
+      enabled: config?.enabled || false,
+      configured: !!(config?.host && config?.username)
+    });
+  } catch (e) {
+    console.error("MikroTik status error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get active MAC bindings from MikroTik
+router.get("/api/mikrotik/bindings", requireAdmin, async (req, res) => {
+  try {
+    const result = await mikrotikService.getActiveBindings();
+    res.json(result);
+  } catch (e) {
+    console.error("MikroTik bindings error:", e);
+    res.status(500).json({ ok: false, message: e.message, bindings: [] });
+  }
+});
+
+// Remove a MAC binding
+router.delete("/api/mikrotik/bindings/:mac", requireAdmin, async (req, res) => {
+  try {
+    const result = await mikrotikService.removeMacBinding(req.params.mac);
+    res.json(result);
+  } catch (e) {
+    console.error("MikroTik remove binding error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+/**
+ * Mask sensitive credential values for display
+ */
+function maskCredentials(credentials, providerCode) {
+  if (!credentials) return {};
+
+  const masked = { ...credentials };
+  const sensitiveFields = {
+    flutterwave: ["secret_key", "webhook_hash"],
+    yopayments: ["api_password"]
+  };
+
+  const fieldsToMask = sensitiveFields[providerCode] || [];
+  for (const field of fieldsToMask) {
+    if (masked[field]) {
+      // Show first 4 and last 4 characters with masking in between
+      const val = String(masked[field]);
+      if (val.length > 8) {
+        masked[field] = val.slice(0, 4) + "••••••••" + val.slice(-4);
+      } else if (val.length > 0) {
+        masked[field] = "••••••••";
+      }
+    }
+  }
+  return masked;
+}
+
+// ============ FINANCE API ENDPOINTS ============
+
+// Ensure payment_logs table exists
+async function ensurePaymentLogsTable() {
+  try {
+    await portalDB.query(`
+      CREATE TABLE IF NOT EXISTS payment_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        order_id INT,
+        provider_code VARCHAR(50) NOT NULL,
+        transaction_ref VARCHAR(100),
+        provider_tx_id VARCHAR(100),
+        amount DECIMAL(15, 2) NOT NULL,
+        currency VARCHAR(10) DEFAULT 'UGX',
+        status ENUM('initiated', 'pending', 'processing', 'success', 'failed', 'cancelled') DEFAULT 'initiated',
+        status_message TEXT,
+        request_payload JSON,
+        response_payload JSON,
+        customer_msisdn VARCHAR(20),
+        payment_method VARCHAR(50),
+        initiated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        completed_at TIMESTAMP NULL,
+        INDEX idx_order_id (order_id),
+        INDEX idx_provider_code (provider_code),
+        INDEX idx_transaction_ref (transaction_ref),
+        INDEX idx_status (status),
+        INDEX idx_initiated_at (initiated_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+  } catch (e) {
+    console.error("Error ensuring payment_logs table:", e);
+  }
+}
+
+// Ensure withdrawals table exists
+async function ensureWithdrawalsTable() {
+  try {
+    await portalDB.query(`
+      CREATE TABLE IF NOT EXISTS withdrawals (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        withdrawal_ref VARCHAR(50) NOT NULL UNIQUE,
+        amount DECIMAL(15, 2) NOT NULL,
+        currency VARCHAR(10) DEFAULT 'UGX',
+        destination_type ENUM('bank_account', 'mobile_money') NOT NULL,
+        destination_details JSON,
+        status ENUM('pending', 'processing', 'completed', 'failed', 'cancelled') DEFAULT 'pending',
+        requested_by INT,
+        approved_by INT,
+        requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        processed_at TIMESTAMP NULL,
+        completed_at TIMESTAMP NULL,
+        notes TEXT,
+        INDEX idx_withdrawal_ref (withdrawal_ref),
+        INDEX idx_status (status),
+        INDEX idx_requested_at (requested_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+  } catch (e) {
+    console.error("Error ensuring withdrawals table:", e);
+  }
+}
+
+// Initialize tables
+ensurePaymentLogsTable();
+ensureWithdrawalsTable();
+
+// Get finance dashboard summary
+router.get("/api/finance/summary", requireAdmin, async (req, res) => {
+  try {
+    const safeSum = async (sql, params = []) => {
+      try {
+        const [[row]] = await portalDB.query(sql, params);
+        const val = row && (row.total ?? Object.values(row)[0]);
+        return Number(val || 0);
+      } catch (e) {
+        return 0;
+      }
+    };
+
+    const safeCount = async (sql, params = []) => {
+      try {
+        const [[row]] = await portalDB.query(sql, params);
+        const val = row && (row.c ?? Object.values(row)[0]);
+        return Number(val || 0);
+      } catch (e) {
+        return 0;
+      }
+    };
+
+    // Calculate totals from orders table
+    const totalRevenue = await safeSum(
+      "SELECT COALESCE(SUM(amount_ugx), 0) AS total FROM orders WHERE status IN ('PAID','SUCCESS','COMPLETED') OR paid_at IS NOT NULL"
+    );
+
+    const monthlyRevenue = await safeSum(
+      "SELECT COALESCE(SUM(amount_ugx), 0) AS total FROM orders WHERE (status IN ('PAID','SUCCESS','COMPLETED') OR paid_at IS NOT NULL) AND MONTH(paid_at) = MONTH(CURDATE()) AND YEAR(paid_at) = YEAR(CURDATE())"
+    );
+
+    const dailyRevenue = await safeSum(
+      "SELECT COALESCE(SUM(amount_ugx), 0) AS total FROM orders WHERE (status IN ('PAID','SUCCESS','COMPLETED') OR paid_at IS NOT NULL) AND DATE(paid_at) = CURDATE()"
+    );
+
+    const pendingPayments = await safeSum(
+      "SELECT COALESCE(SUM(amount_ugx), 0) AS total FROM orders WHERE status = 'PENDING'"
+    );
+
+    // Calculate withdrawals
+    const totalWithdrawn = await safeSum(
+      "SELECT COALESCE(SUM(amount), 0) AS total FROM withdrawals WHERE status = 'completed'"
+    );
+
+    const pendingWithdrawals = await safeSum(
+      "SELECT COALESCE(SUM(amount), 0) AS total FROM withdrawals WHERE status IN ('pending', 'processing')"
+    );
+
+    // Count transactions
+    const totalTransactions = await safeCount(
+      "SELECT COUNT(*) AS c FROM orders WHERE status IN ('PAID','SUCCESS','COMPLETED') OR paid_at IS NOT NULL"
+    );
+
+    const monthlyTransactions = await safeCount(
+      "SELECT COUNT(*) AS c FROM orders WHERE (status IN ('PAID','SUCCESS','COMPLETED') OR paid_at IS NOT NULL) AND MONTH(paid_at) = MONTH(CURDATE()) AND YEAR(paid_at) = YEAR(CURDATE())"
+    );
+
+    // Available balance = Total Revenue - Total Withdrawn - Pending Withdrawals
+    const availableBalance = totalRevenue - totalWithdrawn - pendingWithdrawals;
+
+    res.json({
+      ok: true,
+      summary: {
+        totalRevenue,
+        monthlyRevenue,
+        dailyRevenue,
+        pendingPayments,
+        totalWithdrawn,
+        pendingWithdrawals,
+        availableBalance,
+        totalTransactions,
+        monthlyTransactions
+      }
+    });
+  } catch (e) {
+    console.error("Get finance summary error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get payment logs with filters
+router.get("/api/finance/payments", requireAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const offset = (page - 1) * limit;
+    const provider = req.query.provider || null;
+    const status = req.query.status || null;
+    const dateFrom = req.query.date_from || null;
+    const dateTo = req.query.date_to || null;
+
+    // Build query from orders table (primary source of payments)
+    let whereClause = "WHERE 1=1";
+    const params = [];
+
+    if (provider) {
+      whereClause += " AND o.payment_provider = ?";
+      params.push(provider.toUpperCase());
+    }
+    if (status) {
+      whereClause += " AND o.status = ?";
+      params.push(status.toUpperCase());
+    }
+    if (dateFrom) {
+      whereClause += " AND DATE(o.created_at) >= ?";
+      params.push(dateFrom);
+    }
+    if (dateTo) {
+      whereClause += " AND DATE(o.created_at) <= ?";
+      params.push(dateTo);
+    }
+
+    // Get total count
+    const [[countResult]] = await portalDB.query(
+      `SELECT COUNT(*) as total FROM orders o ${whereClause}`,
+      params
+    );
+    const total = countResult.total;
+
+    // Get payment records
+    const [payments] = await portalDB.query(
+      `SELECT o.id, o.order_ref as transaction_ref, o.payment_provider as provider_code,
+              o.provider_tx_id, o.amount_ugx as amount, 'UGX' as currency,
+              o.status, o.created_at as initiated_at, o.paid_at as completed_at,
+              c.msisdn as customer_msisdn, p.name as plan_name
+       FROM orders o
+       LEFT JOIN customers c ON o.customer_id = c.id
+       LEFT JOIN plans p ON o.plan_id = p.id
+       ${whereClause}
+       ORDER BY o.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    res.json({
+      ok: true,
+      payments,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (e) {
+    console.error("Get payment logs error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get withdrawals
+router.get("/api/finance/withdrawals", requireAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const offset = (page - 1) * limit;
+    const status = req.query.status || null;
+
+    let whereClause = "WHERE 1=1";
+    const params = [];
+
+    if (status) {
+      whereClause += " AND w.status = ?";
+      params.push(status);
+    }
+
+    // Get total count
+    const [[countResult]] = await portalDB.query(
+      `SELECT COUNT(*) as total FROM withdrawals w ${whereClause}`,
+      params
+    );
+    const total = countResult.total;
+
+    // Get withdrawals with user info
+    const [withdrawals] = await portalDB.query(
+      `SELECT w.*,
+              req.full_name as requested_by_name, req.email as requested_by_email,
+              apr.full_name as approved_by_name
+       FROM withdrawals w
+       LEFT JOIN admin_users req ON w.requested_by = req.id
+       LEFT JOIN admin_users apr ON w.approved_by = apr.id
+       ${whereClause}
+       ORDER BY w.requested_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    // Parse JSON destination_details
+    const parsedWithdrawals = withdrawals.map(w => ({
+      ...w,
+      destination_details: typeof w.destination_details === 'string'
+        ? JSON.parse(w.destination_details)
+        : w.destination_details || {}
+    }));
+
+    res.json({
+      ok: true,
+      withdrawals: parsedWithdrawals,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (e) {
+    console.error("Get withdrawals error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Create withdrawal request
+router.post("/api/finance/withdrawals", requireAdmin, async (req, res) => {
+  try {
+    const { amount, destination_type, destination_details, notes } = req.body;
+
+    // Validation
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ ok: false, message: "Valid amount is required" });
+    }
+    if (!destination_type || !["bank_account", "mobile_money"].includes(destination_type)) {
+      return res.status(400).json({ ok: false, message: "Invalid destination type" });
+    }
+    if (!destination_details) {
+      return res.status(400).json({ ok: false, message: "Destination details are required" });
+    }
+
+    // Generate withdrawal reference
+    const withdrawalRef = `WD_${nanoid(12)}`;
+
+    await portalDB.query(
+      `INSERT INTO withdrawals (withdrawal_ref, amount, destination_type, destination_details, status, requested_by, notes)
+       VALUES (?, ?, ?, ?, 'pending', ?, ?)`,
+      [
+        withdrawalRef,
+        amount,
+        destination_type,
+        JSON.stringify(destination_details),
+        req.session.admin.id,
+        notes || null
+      ]
+    );
+
+    res.json({ ok: true, message: "Withdrawal request created", withdrawal_ref: withdrawalRef });
+  } catch (e) {
+    console.error("Create withdrawal error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Update withdrawal status (SUPER_ADMIN only)
+router.patch("/api/finance/withdrawals/:id", requireAdmin, requireSuperAdmin, async (req, res) => {
+  try {
+    const { status, notes } = req.body;
+    const validStatuses = ["pending", "processing", "completed", "failed", "cancelled"];
+
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ ok: false, message: "Invalid status" });
+    }
+
+    const [[withdrawal]] = await portalDB.query(
+      "SELECT id, status FROM withdrawals WHERE id = ?",
+      [req.params.id]
+    );
+
+    if (!withdrawal) {
+      return res.status(404).json({ ok: false, message: "Withdrawal not found" });
+    }
+
+    // Don't allow changing completed/failed withdrawals
+    if (["completed", "failed"].includes(withdrawal.status)) {
+      return res.status(400).json({ ok: false, message: "Cannot modify completed or failed withdrawals" });
+    }
+
+    let updateQuery = "UPDATE withdrawals SET status = ?";
+    let params = [status];
+
+    // Set timestamps based on status
+    if (status === "processing") {
+      updateQuery += ", processed_at = NOW(), approved_by = ?";
+      params.push(req.session.admin.id);
+    } else if (status === "completed" || status === "failed") {
+      updateQuery += ", completed_at = NOW()";
+    }
+
+    if (notes) {
+      updateQuery += ", notes = ?";
+      params.push(notes);
+    }
+
+    updateQuery += " WHERE id = ?";
+    params.push(req.params.id);
+
+    await portalDB.query(updateQuery, params);
+
+    res.json({ ok: true, message: `Withdrawal ${status}` });
+  } catch (e) {
+    console.error("Update withdrawal error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Export payments as CSV
+router.get("/api/finance/payments/export", requireAdmin, async (req, res) => {
+  try {
+    const provider = req.query.provider || null;
+    const status = req.query.status || null;
+    const dateFrom = req.query.date_from || null;
+    const dateTo = req.query.date_to || null;
+
+    let whereClause = "WHERE 1=1";
+    const params = [];
+
+    if (provider) {
+      whereClause += " AND o.payment_provider = ?";
+      params.push(provider.toUpperCase());
+    }
+    if (status) {
+      whereClause += " AND o.status = ?";
+      params.push(status.toUpperCase());
+    }
+    if (dateFrom) {
+      whereClause += " AND DATE(o.created_at) >= ?";
+      params.push(dateFrom);
+    }
+    if (dateTo) {
+      whereClause += " AND DATE(o.created_at) <= ?";
+      params.push(dateTo);
+    }
+
+    const [payments] = await portalDB.query(
+      `SELECT o.order_ref, o.payment_provider, o.provider_tx_id, o.amount_ugx,
+              o.status, o.created_at, o.paid_at, c.msisdn, p.name as plan_name
+       FROM orders o
+       LEFT JOIN customers c ON o.customer_id = c.id
+       LEFT JOIN plans p ON o.plan_id = p.id
+       ${whereClause}
+       ORDER BY o.created_at DESC`,
+      params
+    );
+
+    // Generate CSV
+    const headers = ['Reference', 'Provider', 'Provider TX ID', 'Amount (UGX)', 'Status', 'Customer', 'Plan', 'Created', 'Paid'];
+    const rows = payments.map(p => [
+      p.order_ref,
+      p.payment_provider || '',
+      p.provider_tx_id || '',
+      p.amount_ugx,
+      p.status,
+      p.msisdn || '',
+      p.plan_name || '',
+      p.created_at ? new Date(p.created_at).toISOString() : '',
+      p.paid_at ? new Date(p.paid_at).toISOString() : ''
+    ]);
+
+    const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=payments-${Date.now()}.csv`);
+    res.send(csv);
+  } catch (e) {
+    console.error("Export payments error:", e);
     res.status(500).json({ ok: false, message: e.message });
   }
 });

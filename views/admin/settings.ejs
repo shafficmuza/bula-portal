@@ -20,6 +20,8 @@
           <button class="tab-btn" data-tab="branding">Branding</button>
           <button class="tab-btn" data-tab="portal">Captive Portal</button>
           <button class="tab-btn" data-tab="theme">Theme</button>
+          <button class="tab-btn" data-tab="payments">Payments</button>
+          <button class="tab-btn" data-tab="mikrotik">MikroTik</button>
           <button class="tab-btn" data-tab="support">Support</button>
         </div>
 
@@ -302,6 +304,266 @@
           </div>
         </div>
 
+        <!-- Payments Tab -->
+        <div class="tab-content" id="tab-payments">
+          <!-- Flutterwave -->
+          <div class="card">
+            <div class="card-head">
+              <div class="card-head__title">
+                <h3>Flutterwave</h3>
+                <span class="provider-status" id="flw-status">Loading...</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="flw_enabled">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <form id="flutterwaveForm" class="settings-form">
+              <div class="form-group">
+                <label for="flw_environment">Environment</label>
+                <select id="flw_environment" name="environment">
+                  <option value="test">Test (Sandbox)</option>
+                  <option value="live">Live (Production)</option>
+                </select>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="flw_public_key">Public Key</label>
+                  <input type="text" id="flw_public_key" name="public_key" placeholder="FLWPUBK-xxxxxxxx">
+                </div>
+                <div class="form-group">
+                  <label for="flw_secret_key">Secret Key</label>
+                  <div class="password-input">
+                    <input type="password" id="flw_secret_key" name="secret_key" placeholder="FLWSECK-xxxxxxxx">
+                    <button type="button" class="password-toggle" onclick="togglePassword('flw_secret_key')">
+                      <i data-lucide="eye"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="flw_webhook_hash">Webhook Secret Hash</label>
+                <div class="password-input">
+                  <input type="password" id="flw_webhook_hash" name="webhook_hash" placeholder="Your webhook secret hash">
+                  <button type="button" class="password-toggle" onclick="togglePassword('flw_webhook_hash')">
+                    <i data-lucide="eye"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="webhook-info">
+                <label>Webhook URL</label>
+                <div class="webhook-url">
+                  <code id="flw_webhook_url"></code>
+                  <button type="button" class="btn btn--sm" onclick="copyWebhookUrl('flw_webhook_url')">
+                    <i data-lucide="copy"></i> Copy
+                  </button>
+                </div>
+                <p class="form-help">Add this URL to your Flutterwave dashboard webhook settings.</p>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn--primary">Save Flutterwave Settings</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Yo Payments -->
+          <div class="card mt-16">
+            <div class="card-head">
+              <div class="card-head__title">
+                <h3>Yo Payments</h3>
+                <span class="provider-status" id="yo-status">Loading...</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="yo_enabled">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <form id="yopaymentsForm" class="settings-form">
+              <div class="form-group">
+                <label for="yo_environment">Environment</label>
+                <select id="yo_environment" name="environment">
+                  <option value="test">Test (Sandbox)</option>
+                  <option value="live">Live (Production)</option>
+                </select>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="yo_api_username">API Username</label>
+                  <input type="text" id="yo_api_username" name="api_username" placeholder="Your Yo Payments username">
+                </div>
+                <div class="form-group">
+                  <label for="yo_api_password">API Password</label>
+                  <div class="password-input">
+                    <input type="password" id="yo_api_password" name="api_password" placeholder="Your API password">
+                    <button type="button" class="password-toggle" onclick="togglePassword('yo_api_password')">
+                      <i data-lucide="eye"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="yo_account_number">Account Number</label>
+                <input type="text" id="yo_account_number" name="account_number" placeholder="Your Yo Payments account number">
+              </div>
+
+              <div class="webhook-info">
+                <label>IPN (Webhook) URL</label>
+                <div class="webhook-url">
+                  <code id="yo_webhook_url"></code>
+                  <button type="button" class="btn btn--sm" onclick="copyWebhookUrl('yo_webhook_url')">
+                    <i data-lucide="copy"></i> Copy
+                  </button>
+                </div>
+                <p class="form-help">Add this URL as the IPN notification URL in your Yo Payments account.</p>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn--primary">Save Yo Payments Settings</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Payment Provider Info -->
+          <div class="card mt-16">
+            <div class="card-head">
+              <h3>Payment Integration Guide</h3>
+            </div>
+            <div class="info-section">
+              <h4>Flutterwave</h4>
+              <p>Accept payments via cards, mobile money (MTN, Airtel), and bank transfers across Africa.</p>
+              <ol>
+                <li>Create an account at <a href="https://flutterwave.com" target="_blank">flutterwave.com</a></li>
+                <li>Get your API keys from Settings > API Keys</li>
+                <li>Copy the Webhook URL above and add it in Settings > Webhooks</li>
+                <li>Enable the provider and save</li>
+              </ol>
+
+              <h4 class="mt-16">Yo Payments</h4>
+              <p>Accept mobile money payments in Uganda (MTN and Airtel).</p>
+              <ol>
+                <li>Register at <a href="https://yopayments.com" target="_blank">yopayments.com</a></li>
+                <li>Get your API credentials from your account dashboard</li>
+                <li>Set up the IPN URL in your Yo Payments account</li>
+                <li>Enable the provider and save</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <!-- MikroTik Tab -->
+        <div class="tab-content" id="tab-mikrotik">
+          <div class="card">
+            <div class="card-head">
+              <div class="card-head__title">
+                <h3>MikroTik Router Integration</h3>
+                <span class="provider-status" id="mikrotik-status">
+                  <%= settings.mikrotik_enabled ? 'Enabled' : 'Disabled' %>
+                </span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="mikrotik_enabled" <%= settings.mikrotik_enabled ? 'checked' : '' %>>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <form id="mikrotikForm" class="settings-form">
+              <div class="info-section" style="margin-bottom: 20px; padding: 16px; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
+                <p style="margin: 0; font-size: 0.9375rem;">
+                  <strong>Auto-Login Feature:</strong> When enabled, customers will be automatically connected to WiFi after successful payment. Their MAC address is captured from the MikroTik hotspot redirect and authorized via the RouterOS API.
+                </p>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="mikrotik_host">Router IP Address</label>
+                  <input type="text" id="mikrotik_host" name="mikrotik_host" value="<%= settings.mikrotik_host || '' %>" placeholder="e.g., 192.168.88.1">
+                  <p class="form-help">IP address of your MikroTik router</p>
+                </div>
+                <div class="form-group">
+                  <label for="mikrotik_port">API Port</label>
+                  <input type="number" id="mikrotik_port" name="mikrotik_port" value="<%= settings.mikrotik_port || 8728 %>" placeholder="8728">
+                  <p class="form-help">Default: 8728 (API), 8729 (API-SSL)</p>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="mikrotik_username">API Username</label>
+                  <input type="text" id="mikrotik_username" name="mikrotik_username" value="<%= settings.mikrotik_username || '' %>" placeholder="admin">
+                  <p class="form-help">User with API and write access</p>
+                </div>
+                <div class="form-group">
+                  <label for="mikrotik_password">API Password</label>
+                  <div class="password-input">
+                    <input type="password" id="mikrotik_password" name="mikrotik_password" value="<%= settings.mikrotik_password || '' %>" placeholder="Router password">
+                    <button type="button" class="password-toggle" onclick="togglePassword('mikrotik_password')">
+                      <i data-lucide="eye"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="mikrotik_hotspot_server">Hotspot Server Name</label>
+                <input type="text" id="mikrotik_hotspot_server" name="mikrotik_hotspot_server" value="<%= settings.mikrotik_hotspot_server || '' %>" placeholder="hotspot1">
+                <p class="form-help">Name of the hotspot server in MikroTik (leave blank for "all")</p>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn--primary">Save MikroTik Settings</button>
+                <button type="button" class="btn" id="testMikrotikBtn" onclick="testMikrotikConnection()">
+                  <i data-lucide="wifi"></i> Test Connection
+                </button>
+              </div>
+            </form>
+
+            <div id="mikrotikTestResult" style="display: none; margin-top: 16px; padding: 16px; border-radius: var(--radius);"></div>
+          </div>
+
+          <div class="card mt-16">
+            <div class="card-head">
+              <h3>MikroTik Setup Instructions</h3>
+            </div>
+            <div class="info-section">
+              <h4>1. Enable API Access on MikroTik</h4>
+              <p>In WinBox or terminal, enable the API service:</p>
+              <pre style="background: var(--bg); padding: 12px; border-radius: var(--radius-sm); margin: 12px 0; overflow-x: auto;">/ip service enable api
+/ip service set api port=8728</pre>
+
+              <h4 class="mt-16">2. Create API User (Recommended)</h4>
+              <p>Create a dedicated user with API and write permissions:</p>
+              <pre style="background: var(--bg); padding: 12px; border-radius: var(--radius-sm); margin: 12px 0; overflow-x: auto;">/user add name=bula-api password=YOUR_SECURE_PASSWORD group=full</pre>
+
+              <h4 class="mt-16">3. Configure Hotspot Walled Garden</h4>
+              <p>Add your portal domain to the walled garden so users can access it before authentication:</p>
+              <pre style="background: var(--bg); padding: 12px; border-radius: var(--radius-sm); margin: 12px 0; overflow-x: auto;">/ip hotspot walled-garden add dst-host=bula.prosystemsug.com action=allow
+/ip hotspot walled-garden ip add dst-address=YOUR_PORTAL_SERVER_IP action=accept</pre>
+
+              <h4 class="mt-16">4. Configure Hotspot Login Page</h4>
+              <p>Set your portal as the login page and include MAC parameter:</p>
+              <pre style="background: var(--bg); padding: 12px; border-radius: var(--radius-sm); margin: 12px 0; overflow-x: auto;">/ip hotspot profile set default login-by=http-chap,http-pap html-directory=hotspot
+/ip hotspot profile set default login-by=cookie,http-chap http-cookie-lifetime=1d</pre>
+
+              <h4 class="mt-16">5. How It Works</h4>
+              <ol style="margin: 12px 0; padding-left: 20px;">
+                <li>Customer connects to WiFi and is redirected to MikroTik login page</li>
+                <li>MikroTik redirects to your portal with MAC address in URL: <code>/portal?mac=XX:XX:XX:XX:XX:XX</code></li>
+                <li>Customer completes payment on your portal</li>
+                <li>After payment, the system creates an IP binding for the MAC address</li>
+                <li>Customer is automatically connected - no voucher code entry needed!</li>
+              </ol>
+
+              <h4 class="mt-16">Fallback Behavior</h4>
+              <p>If auto-login fails (router unreachable, API error, etc.), customers will see their voucher code and can connect manually.</p>
+            </div>
+          </div>
+        </div>
+
         <!-- Support Tab -->
         <div class="tab-content" id="tab-support">
           <div class="card">
@@ -571,6 +833,194 @@
       background: #fecaca;
     }
 
+    /* Payment Tab Styles */
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-head__title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .card-head__title h3 {
+      margin: 0;
+    }
+
+    .provider-status {
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .provider-status.enabled {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .provider-status.disabled {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 26px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.3s;
+      border-radius: 26px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: var(--primary);
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(22px);
+    }
+
+    .password-input {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .password-input input {
+      flex: 1;
+      padding-right: 40px;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .password-toggle:hover {
+      color: var(--text);
+    }
+
+    .password-toggle svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .webhook-info {
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--bg);
+      border-radius: var(--radius);
+    }
+
+    .webhook-info label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .webhook-url {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--white);
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    .webhook-url code {
+      flex: 1;
+      font-size: 0.8125rem;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    .btn--sm {
+      padding: 6px 12px;
+      font-size: 0.75rem;
+    }
+
+    .form-help {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    .info-section {
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+
+    .info-section h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .info-section ol {
+      margin: 12px 0;
+      padding-left: 20px;
+    }
+
+    .info-section li {
+      margin-bottom: 6px;
+    }
+
+    .info-section a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .info-section a:hover {
+      text-decoration: underline;
+    }
+
+    .mt-16 {
+      margin-top: 16px;
+    }
+
     @media (max-width: 768px) {
       .form-grid,
       .form-grid--3 {
@@ -785,6 +1235,264 @@
       }
     `;
     document.head.appendChild(style);
+
+    // Payment Provider Management
+    const baseUrl = window.location.origin;
+
+    // Set webhook URLs
+    document.getElementById('flw_webhook_url').textContent = `${baseUrl}/api/payments/flutterwave/webhook`;
+    document.getElementById('yo_webhook_url').textContent = `${baseUrl}/api/payments/yopayments/webhook`;
+
+    // Load payment providers
+    async function loadPaymentProviders() {
+      try {
+        const response = await fetch('/admin/api/payment-providers');
+        const result = await response.json();
+        if (result.ok) {
+          result.providers.forEach(provider => {
+            if (provider.provider_code === 'flutterwave') {
+              populateFlutterwaveForm(provider);
+            } else if (provider.provider_code === 'yopayments') {
+              populateYoPaymentsForm(provider);
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Error loading payment providers:', e);
+      }
+    }
+
+    function populateFlutterwaveForm(provider) {
+      document.getElementById('flw_enabled').checked = provider.is_enabled === 1;
+      document.getElementById('flw_environment').value = provider.environment || 'test';
+      document.getElementById('flw_public_key').value = provider.credentials?.public_key || '';
+      document.getElementById('flw_secret_key').value = provider.credentials?.secret_key || '';
+      document.getElementById('flw_webhook_hash').value = provider.credentials?.webhook_hash || '';
+      updateProviderStatus('flw', provider.is_enabled === 1);
+    }
+
+    function populateYoPaymentsForm(provider) {
+      document.getElementById('yo_enabled').checked = provider.is_enabled === 1;
+      document.getElementById('yo_environment').value = provider.environment || 'test';
+      document.getElementById('yo_api_username').value = provider.credentials?.api_username || '';
+      document.getElementById('yo_api_password').value = provider.credentials?.api_password || '';
+      document.getElementById('yo_account_number').value = provider.credentials?.account_number || '';
+      updateProviderStatus('yo', provider.is_enabled === 1);
+    }
+
+    function updateProviderStatus(prefix, enabled) {
+      const statusEl = document.getElementById(`${prefix}-status`);
+      if (enabled) {
+        statusEl.textContent = 'Enabled';
+        statusEl.className = 'provider-status enabled';
+      } else {
+        statusEl.textContent = 'Disabled';
+        statusEl.className = 'provider-status disabled';
+      }
+    }
+
+    // Toggle password visibility
+    function togglePassword(inputId) {
+      const input = document.getElementById(inputId);
+      const icon = input.parentElement.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        input.type = 'password';
+        icon.setAttribute('data-lucide', 'eye');
+      }
+      lucide.createIcons();
+    }
+
+    // Copy webhook URL
+    function copyWebhookUrl(elementId) {
+      const url = document.getElementById(elementId).textContent;
+      navigator.clipboard.writeText(url).then(() => {
+        showToast('Webhook URL copied to clipboard');
+      }).catch(() => {
+        showToast('Failed to copy URL', 'error');
+      });
+    }
+
+    // Save Flutterwave settings
+    document.getElementById('flutterwaveForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const response = await fetch('/admin/api/payment-providers/flutterwave', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            is_enabled: document.getElementById('flw_enabled').checked,
+            environment: document.getElementById('flw_environment').value,
+            credentials: {
+              public_key: document.getElementById('flw_public_key').value,
+              secret_key: document.getElementById('flw_secret_key').value,
+              webhook_hash: document.getElementById('flw_webhook_hash').value
+            }
+          })
+        });
+        const result = await response.json();
+        if (result.ok) {
+          showToast('Flutterwave settings saved');
+          updateProviderStatus('flw', document.getElementById('flw_enabled').checked);
+        } else {
+          showToast(result.message || 'Failed to save settings', 'error');
+        }
+      } catch (e) {
+        showToast('Error saving settings', 'error');
+      }
+    });
+
+    // Save Yo Payments settings
+    document.getElementById('yopaymentsForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const response = await fetch('/admin/api/payment-providers/yopayments', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            is_enabled: document.getElementById('yo_enabled').checked,
+            environment: document.getElementById('yo_environment').value,
+            credentials: {
+              api_username: document.getElementById('yo_api_username').value,
+              api_password: document.getElementById('yo_api_password').value,
+              account_number: document.getElementById('yo_account_number').value
+            }
+          })
+        });
+        const result = await response.json();
+        if (result.ok) {
+          showToast('Yo Payments settings saved');
+          updateProviderStatus('yo', document.getElementById('yo_enabled').checked);
+        } else {
+          showToast(result.message || 'Failed to save settings', 'error');
+        }
+      } catch (e) {
+        showToast('Error saving settings', 'error');
+      }
+    });
+
+    // Toggle change handlers
+    document.getElementById('flw_enabled').addEventListener('change', function() {
+      updateProviderStatus('flw', this.checked);
+    });
+
+    document.getElementById('yo_enabled').addEventListener('change', function() {
+      updateProviderStatus('yo', this.checked);
+    });
+
+    // Load providers on page load
+    loadPaymentProviders();
+
+    // ============ MikroTik Settings ============
+
+    // MikroTik toggle change handler
+    document.getElementById('mikrotik_enabled').addEventListener('change', function() {
+      updateMikrotikStatus(this.checked);
+    });
+
+    function updateMikrotikStatus(enabled) {
+      const statusEl = document.getElementById('mikrotik-status');
+      if (enabled) {
+        statusEl.textContent = 'Enabled';
+        statusEl.className = 'provider-status enabled';
+      } else {
+        statusEl.textContent = 'Disabled';
+        statusEl.className = 'provider-status disabled';
+      }
+    }
+
+    // Save MikroTik settings
+    document.getElementById('mikrotikForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const data = {
+          mikrotik_enabled: document.getElementById('mikrotik_enabled').checked ? 1 : 0,
+          mikrotik_host: document.getElementById('mikrotik_host').value,
+          mikrotik_port: parseInt(document.getElementById('mikrotik_port').value) || 8728,
+          mikrotik_username: document.getElementById('mikrotik_username').value,
+          mikrotik_password: document.getElementById('mikrotik_password').value,
+          mikrotik_hotspot_server: document.getElementById('mikrotik_hotspot_server').value
+        };
+
+        const response = await fetch('/admin/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if (result.ok) {
+          showToast('MikroTik settings saved');
+          updateMikrotikStatus(data.mikrotik_enabled);
+        } else {
+          showToast(result.message || 'Failed to save settings', 'error');
+        }
+      } catch (e) {
+        showToast('Error saving settings', 'error');
+      }
+    });
+
+    // Test MikroTik connection
+    async function testMikrotikConnection() {
+      const resultDiv = document.getElementById('mikrotikTestResult');
+      const btn = document.getElementById('testMikrotikBtn');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader"></i> Testing...';
+      lucide.createIcons();
+
+      resultDiv.style.display = 'block';
+      resultDiv.style.background = 'var(--bg)';
+      resultDiv.innerHTML = '<p>Connecting to MikroTik router...</p>';
+
+      try {
+        const response = await fetch('/admin/api/mikrotik/test');
+        const result = await response.json();
+
+        if (result.ok && result.result.success) {
+          resultDiv.style.background = '#dcfce7';
+          resultDiv.style.borderLeft = '4px solid #22c55e';
+          resultDiv.innerHTML = `
+            <p style="color: #166534; font-weight: 600; margin-bottom: 8px;">
+              <i data-lucide="check-circle" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:4px;"></i>
+              Connection Successful!
+            </p>
+            <p style="color: #166534; margin: 0;">
+              Router: <strong>${result.result.identity || 'Unknown'}</strong><br>
+              Version: <strong>${result.result.version || 'Unknown'}</strong>
+            </p>
+          `;
+        } else {
+          resultDiv.style.background = '#fee2e2';
+          resultDiv.style.borderLeft = '4px solid #ef4444';
+          resultDiv.innerHTML = `
+            <p style="color: #991b1b; font-weight: 600; margin-bottom: 8px;">
+              <i data-lucide="x-circle" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:4px;"></i>
+              Connection Failed
+            </p>
+            <p style="color: #991b1b; margin: 0;">
+              ${result.result?.message || result.message || 'Unable to connect to MikroTik router'}
+            </p>
+          `;
+        }
+        lucide.createIcons();
+      } catch (e) {
+        resultDiv.style.background = '#fee2e2';
+        resultDiv.style.borderLeft = '4px solid #ef4444';
+        resultDiv.innerHTML = `
+          <p style="color: #991b1b; font-weight: 600;">
+            <i data-lucide="x-circle" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:4px;"></i>
+            Error: ${e.message}
+          </p>
+        `;
+        lucide.createIcons();
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="wifi"></i> Test Connection';
+      lucide.createIcons();
+    }
   </script>
 </body>
 </html>

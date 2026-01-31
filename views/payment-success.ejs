@@ -39,6 +39,86 @@
       color: #fff;
     }
 
+    .card-header.connected {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    }
+
+    .connected-banner {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      border-radius: 16px;
+      margin-bottom: 20px;
+    }
+
+    .connected-banner h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .connected-banner p {
+      opacity: 0.9;
+      font-size: 0.9375rem;
+    }
+
+    .wifi-icon {
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .voucher-fallback {
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .voucher-fallback p {
+      color: #92400e;
+      font-size: 0.875rem;
+      margin: 0;
+    }
+
+    .voucher-collapsed {
+      cursor: pointer;
+    }
+
+    .voucher-collapsed .voucher-box {
+      opacity: 0.7;
+      max-height: 80px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .voucher-collapsed .voucher-box::after {
+      content: 'Click to show voucher code';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, #f0fdf4);
+      padding: 20px;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #166534;
+    }
+
+    .voucher-expanded .voucher-box {
+      max-height: none;
+      opacity: 1;
+    }
+
     .success-icon {
       width: 80px;
       height: 80px;
@@ -288,27 +368,62 @@
 <body>
   <div class="container">
     <div class="card">
-      <div class="card-header">
+      <% const isConnected = typeof autoLogin !== 'undefined' && autoLogin && autoLogin.success; %>
+      <% const autoLoginAttempted = typeof autoLogin !== 'undefined' && autoLogin && autoLogin.attempted; %>
+
+      <div class="card-header<%= isConnected ? ' connected' : '' %>">
         <div class="success-icon">
+          <% if (isConnected) { %>
+          <svg class="wifi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+            <circle cx="12" cy="20" r="1"></circle>
+          </svg>
+          <% } else { %>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
+          <% } %>
         </div>
+        <% if (isConnected) { %>
+        <h1>You're Connected!</h1>
+        <p>Your device is now authorized for WiFi access</p>
+        <% } else { %>
         <h1>Payment Successful!</h1>
         <p>Your WiFi voucher is ready to use</p>
+        <% } %>
       </div>
 
       <div class="card-body">
+        <% if (isConnected) { %>
+        <div class="connected-banner">
+          <h2>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            WiFi Access Activated
+          </h2>
+          <p>Your internet connection is now active. Enjoy browsing!</p>
+        </div>
+        <% } else if (autoLoginAttempted && !autoLogin.success) { %>
+        <div class="voucher-fallback">
+          <p><strong>Note:</strong> Automatic connection was not available. Please use the voucher code below to connect manually.</p>
+        </div>
+        <% } %>
+
+        <div id="voucherSection" class="<%= isConnected ? 'voucher-collapsed' : 'voucher-expanded' %>" onclick="toggleVoucher()">
         <div class="voucher-box">
-          <div class="voucher-label">Your WiFi Voucher Code</div>
+          <div class="voucher-label"><%= isConnected ? 'Backup Voucher Code' : 'Your WiFi Voucher Code' %></div>
 
           <div class="voucher-field">
             <div class="voucher-field-label">Voucher Code</div>
-            <div class="voucher-field-value" onclick="copyToClipboard('<%= voucher.username %>', this)" title="Click to copy">
+            <div class="voucher-field-value" onclick="event.stopPropagation(); copyToClipboard('<%= voucher.username %>', this)" title="Click to copy">
               <%= voucher.username %>
             </div>
             <div class="copy-hint">Tap to copy</div>
           </div>
+        </div>
         </div>
 
         <div class="plan-details">
@@ -349,6 +464,7 @@
           </div>
         </div>
 
+        <% if (!isConnected) { %>
         <div class="instructions">
           <h3>How to Connect</h3>
           <ol>
@@ -358,7 +474,25 @@
             <li>Click Login and enjoy your internet!</li>
           </ol>
         </div>
+        <% } else { %>
+        <div class="instructions">
+          <h3>You're all set!</h3>
+          <ol>
+            <li>Your device is now connected to the internet</li>
+            <li>If you disconnect, reconnect to the <strong>Buulas WiFi</strong> network</li>
+            <li>Keep the voucher code as a backup in case you need to login manually</li>
+          </ol>
+        </div>
+        <% } %>
 
+        <% if (isConnected) { %>
+        <button class="btn btn-primary" onclick="window.location.href='/'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;margin-right:8px;vertical-align:middle;">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Done - Start Browsing
+        </button>
+        <% } else { %>
         <button class="btn btn-primary btn-activate" onclick="activateNow()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;margin-right:8px;vertical-align:middle;">
             <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
@@ -368,6 +502,7 @@
           </svg>
           Activate & Connect Now
         </button>
+        <% } %>
 
         <button class="btn btn-secondary" onclick="copyCredentials()">
           Copy Voucher Code
@@ -413,6 +548,14 @@
           element.textContent = original;
         }, 1500);
       });
+    }
+
+    function toggleVoucher() {
+      const section = document.getElementById('voucherSection');
+      if (section.classList.contains('voucher-collapsed')) {
+        section.classList.remove('voucher-collapsed');
+        section.classList.add('voucher-expanded');
+      }
     }
 
     function copyCredentials() {

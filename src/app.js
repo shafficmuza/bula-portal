@@ -11,6 +11,7 @@ const portalDB = require("./config/db.portal");
 const portalRoutes = require("./routes/portal.routes");
 const loadSettings = require("./middleware/loadSettings");
 const settingsService = require("./services/settings.service");
+const paymentProviderService = require("./services/payment-provider.service");
 
 const app = express();
 
@@ -64,6 +65,9 @@ app.use(express.urlencoded({ extended: true }));
 // Ensure settings table exists on startup
 settingsService.ensureSettingsTable().catch(console.error);
 
+// Ensure payment providers table exists on startup
+paymentProviderService.ensureTable().catch(console.error);
+
 // Load business settings into all views
 app.use(loadSettings);
 
@@ -72,11 +76,33 @@ app.get("/health", (req, res) => res.json({ ok: true }));
 // Captive Portal Page
 app.get("/portal", async (req, res) => {
   const settings = await settingsService.getSettings();
-  res.render("portal/index", { settings });
+
+  // Capture MikroTik hotspot redirect parameters
+  const customerMac = req.query.mac || req.query["chap-id"] || null;
+  const customerIp = req.query.ip || null;
+  const linkLogin = req.query["link-login"] || req.query["link-login-only"] || null;
+  const linkOrig = req.query["link-orig"] || null;
+
+  // Store in session for payment flow
+  if (customerMac) {
+    req.session.customerMac = customerMac;
+    req.session.customerIp = customerIp;
+    req.session.mikrotikLoginUrl = linkLogin;
+    req.session.mikrotikOrigUrl = linkOrig;
+  }
+
+  res.render("portal/index", {
+    settings,
+    customerMac,
+    customerIp,
+    linkLogin,
+    linkOrig,
+  });
 });
 
 app.use("/api/portal", portalRoutes);
 app.use("/api/payments/flutterwave", require("./routes/flutterwave.routes"));
+app.use("/api/payments/yopayments", require("./routes/yopayments.routes"));
 
 app.use("/admin", require("./routes/admin.routes"));
 

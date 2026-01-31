@@ -3,9 +3,60 @@ const portalDB = require("../config/db.portal");
 const env = require("../config/env");
 const { createPaymentLink, verifyTransaction } = require("../services/flutterwave.service");
 const { activateVoucher } = require("../services/radius.service");
+const mikrotikService = require("../services/mikrotik.service");
+const paymentProviderService = require("../services/payment-provider.service");
 const { nanoid } = require("nanoid");
 
 const router = express.Router();
+
+/**
+ * Log payment event to payment_logs table
+ */
+async function logPayment(data) {
+  try {
+    await portalDB.query(`
+      INSERT INTO payment_logs
+      (order_id, provider_code, transaction_ref, provider_tx_id, amount, currency, status, status_message, request_payload, response_payload, customer_msisdn, payment_method, initiated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+    `, [
+      data.order_id || null,
+      'flutterwave',
+      data.transaction_ref || null,
+      data.provider_tx_id || null,
+      data.amount || 0,
+      data.currency || 'UGX',
+      data.status || 'initiated',
+      data.status_message || null,
+      data.request_payload ? JSON.stringify(data.request_payload) : null,
+      data.response_payload ? JSON.stringify(data.response_payload) : null,
+      data.customer_msisdn || null,
+      data.payment_method || 'card'
+    ]);
+  } catch (e) {
+    console.error("Error logging payment:", e.message);
+  }
+}
+
+/**
+ * Update payment log status
+ */
+async function updatePaymentLog(transactionRef, status, responsePayload, completedAt = null) {
+  try {
+    let query = "UPDATE payment_logs SET status = ?, response_payload = ?";
+    const params = [status, responsePayload ? JSON.stringify(responsePayload) : null];
+
+    if (completedAt) {
+      query += ", completed_at = NOW()";
+    }
+
+    query += " WHERE transaction_ref = ?";
+    params.push(transactionRef);
+
+    await portalDB.query(query, params);
+  } catch (e) {
+    console.error("Error updating payment log:", e.message);
+  }
+}
 
 async function getOrCreateCustomer(msisdn) {
   // Try find existing
@@ -38,11 +89,14 @@ async function getOrCreateCustomer(msisdn) {
  */
 router.post("/init", async (req, res) => {
   try {
-    const { msisdn, planCode } = req.body || {};
+    const { msisdn, planCode, customerMac, customerIp, linkLogin } = req.body || {};
     if (!msisdn || !planCode) return res.status(400).json({ ok: false, message: "msisdn and planCode required" });
 
-    if (!env.FLW_SECRET_KEY || !env.FLW_PUBLIC_KEY) {
-      return res.status(500).json({ ok: false, message: "Flutterwave keys not configured" });
+    // Check if Flutterwave is available (from DB or env)
+    const flwService = require("../services/flutterwave.service");
+    const isAvailable = await flwService.isAvailable();
+    if (!isAvailable) {
+      return res.status(500).json({ ok: false, message: "Flutterwave is not configured" });
     }
 
     const [plans] = await portalDB.query(
@@ -57,16 +111,36 @@ router.post("/init", async (req, res) => {
     const voucherCode = String(Math.floor(10000 + Math.random() * 90000));
 
     const orderRef = `ORD_${nanoid(14)}`;
-	// customer_id: for now we can use 0 and later map it to a real customer record
+    // customer_id: for now we can use 0 and later map it to a real customer record
     const customerId = await getOrCreateCustomer(msisdn);
 
-	await portalDB.query(
-  	`INSERT INTO orders (order_ref, customer_id, plan_id, username, password, amount_ugx, status, payment_provider)
-   	VALUES (?, ?, ?, ?, ?, ?, 'PENDING', 'FLUTTERWAVE')`,
-  	[orderRef, customerId, plan.id, voucherCode, voucherCode, plan.price_ugx]
-	);
+    // Normalize MAC address if provided
+    const normalizedMac = customerMac ? mikrotikService.normalizeMacAddress(customerMac) : null;
 
-const redirect_url = `${env.BASE_URL}/api/payments/flutterwave/redirect?orderRef=${encodeURIComponent(orderRef)}`;
+    await portalDB.query(
+      `INSERT INTO orders (order_ref, customer_id, plan_id, username, password, amount_ugx, status, payment_provider, customer_mac, customer_ip, mikrotik_login_url)
+       VALUES (?, ?, ?, ?, ?, ?, 'PENDING', 'FLUTTERWAVE', ?, ?, ?)`,
+      [orderRef, customerId, plan.id, voucherCode, voucherCode, plan.price_ugx, normalizedMac, customerIp || null, linkLogin || null]
+    );
+
+    // Get order ID for logging
+    const [[orderRow]] = await portalDB.query(
+      "SELECT id FROM orders WHERE order_ref = ?",
+      [orderRef]
+    );
+
+    // Log payment initiation
+    await logPayment({
+      order_id: orderRow?.id,
+      transaction_ref: orderRef,
+      amount: plan.price_ugx,
+      customer_msisdn: msisdn,
+      payment_method: 'flutterwave',
+      status: 'initiated',
+      request_payload: { msisdn, planCode }
+    });
+
+    const redirect_url = `${env.BASE_URL}/api/payments/flutterwave/redirect?orderRef=${encodeURIComponent(orderRef)}`;
 
     const flw = await createPaymentLink({
       tx_ref: orderRef,
@@ -82,7 +156,13 @@ const redirect_url = `${env.BASE_URL}/api/payments/flutterwave/redirect?orderRef
     });
 
     const link = flw?.data?.link;
-    if (!link) return res.status(500).json({ ok: false, message: "Failed to create Flutterwave payment link" });
+    if (!link) {
+      await updatePaymentLog(orderRef, 'failed', flw);
+      return res.status(500).json({ ok: false, message: "Failed to create Flutterwave payment link" });
+    }
+
+    // Update log with pending status
+    await updatePaymentLog(orderRef, 'pending', { link });
 
     return res.json({
       ok: true,
@@ -150,7 +230,7 @@ router.get("/redirect", async (req, res) => {
 
     // Load order
     const [rows] = await portalDB.query(
-      "SELECT id, status, amount_ugx, plan_id, username, password FROM orders WHERE order_ref=? LIMIT 1",
+      "SELECT id, status, amount_ugx, plan_id, username, password, customer_mac, customer_ip, mikrotik_login_url, autologin_status FROM orders WHERE order_ref=? LIMIT 1",
       [orderRef]
     );
     const order = rows && rows[0];
@@ -176,7 +256,14 @@ router.get("/redirect", async (req, res) => {
           username: order.username,
           password: order.password
         },
-        plan: plan ? formatPlanDisplay(plan) : { name: "WiFi Plan", duration_display: "", price_ugx: order.amount_ugx }
+        plan: plan ? formatPlanDisplay(plan) : { name: "WiFi Plan", duration_display: "", price_ugx: order.amount_ugx },
+        autoLogin: {
+          attempted: !!order.autologin_status,
+          success: order.autologin_status === 'success',
+          status: order.autologin_status,
+          mac: order.customer_mac,
+        },
+        linkLogin: order.mikrotik_login_url,
       });
     }
 
@@ -246,14 +333,57 @@ router.get("/redirect", async (req, res) => {
       [txId, orderRef, orderRef]
     );
 
-    // Render success page with voucher details
+    // Attempt MikroTik auto-login if MAC address is available
+    let autoLoginResult = { attempted: false, success: false, status: 'skipped', message: null };
+
+    if (order.customer_mac) {
+      try {
+        const mikrotikResult = await mikrotikService.authorizeMacBinding({
+          mac: order.customer_mac,
+          ip: order.customer_ip,
+          durationMinutes: plan.duration_minutes,
+          comment: `Bula WiFi - Order ${orderRef} - ${plan.name}`,
+          orderId: order.id,
+        });
+
+        autoLoginResult = {
+          attempted: true,
+          success: mikrotikResult.success,
+          status: mikrotikResult.status,
+          message: mikrotikResult.message,
+          mac: order.customer_mac,
+        };
+
+        // Update order with auto-login status
+        await portalDB.query(
+          "UPDATE orders SET autologin_status = ?, autologin_message = ? WHERE order_ref = ?",
+          [mikrotikResult.status, mikrotikResult.message, orderRef]
+        );
+      } catch (mikrotikError) {
+        console.error("MikroTik auto-login error:", mikrotikError.message);
+        autoLoginResult = {
+          attempted: true,
+          success: false,
+          status: 'failed',
+          message: mikrotikError.message,
+        };
+        await portalDB.query(
+          "UPDATE orders SET autologin_status = 'failed', autologin_message = ? WHERE order_ref = ?",
+          [mikrotikError.message, orderRef]
+        );
+      }
+    }
+
+    // Render success page with voucher details and auto-login result
     return res.render("payment-success", {
       orderRef,
       voucher: {
         username: order.username,
         password: order.password
       },
-      plan: formatPlanDisplay(plan)
+      plan: formatPlanDisplay(plan),
+      autoLogin: autoLoginResult,
+      linkLogin: order.mikrotik_login_url,
     });
   } catch (e) {
     console.error("Flutterwave redirect error:", e);
@@ -329,7 +459,7 @@ router.post("/webhook", async (req, res) => {
 
     // 1) Load order
     const [rows] = await portalDB.query(
-      "SELECT id, status, amount_ugx, plan_id, username, password FROM orders WHERE order_ref=? LIMIT 1",
+      "SELECT id, status, amount_ugx, plan_id, username, password, customer_mac, customer_ip FROM orders WHERE order_ref=? LIMIT 1",
       [orderRef]
     );
     const order = rows && rows[0];
@@ -388,6 +518,33 @@ router.post("/webhook", async (req, res) => {
       "UPDATE orders SET status=\"PAID\", provider=\"FLUTTERWAVE\", provider_tx_id=?, provider_ref=?, paid_at=NOW() WHERE order_ref=?",
       [txId, orderRef, orderRef]
     );
+
+    // 6) Attempt MikroTik auto-login if MAC address is available
+    if (order.customer_mac) {
+      try {
+        const mikrotikResult = await mikrotikService.authorizeMacBinding({
+          mac: order.customer_mac,
+          ip: order.customer_ip,
+          durationMinutes: plan.duration_minutes,
+          comment: `Bula WiFi - Order ${orderRef} - Webhook`,
+          orderId: order.id,
+        });
+
+        await portalDB.query(
+          "UPDATE orders SET autologin_status = ?, autologin_message = ? WHERE order_ref = ?",
+          [mikrotikResult.status, mikrotikResult.message, orderRef]
+        );
+      } catch (mikrotikError) {
+        console.error("MikroTik auto-login error (webhook):", mikrotikError.message);
+        await portalDB.query(
+          "UPDATE orders SET autologin_status = 'failed', autologin_message = ? WHERE order_ref = ?",
+          [mikrotikError.message, orderRef]
+        );
+      }
+    }
+
+    // 7) Update payment log
+    await updatePaymentLog(orderRef, 'success', vJson, true);
 
     return res.status(200).send("ok");
   } catch (e) {
