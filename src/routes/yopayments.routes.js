@@ -5,6 +5,7 @@ const env = require("../config/env");
 const yoPaymentsService = require("../services/yopayments.service");
 const paymentProviderService = require("../services/payment-provider.service");
 const mikrotikService = require("../services/mikrotik.service");
+const settingsService = require("../services/settings.service");
 const { activateVoucher } = require("../services/radius.service");
 
 const router = express.Router();
@@ -156,14 +157,21 @@ router.post("/init", async (req, res) => {
       request_payload: { msisdn, planCode, network }
     });
 
-    // Initiate Yo Payments collection
-    const narrative = `Bula WiFi - ${plan.name}`;
+    // Get business settings for narrative
+    const settings = await settingsService.getSettings();
+    const businessName = settings.business_name || "Bula WiFi";
+    // Create short business prefix (first 10 chars)
+    const bizPrefix = businessName.substring(0, 10).trim();
+
+    // Build descriptive narrative: "BUULAS WiFi 4Hours@500UGX"
+    const narrative = `${bizPrefix} WiFi ${plan.name}@${plan.price_ugx}UGX`;
+
     const yoResult = await yoPaymentsService.initiateCollection({
       msisdn,
       amount: plan.price_ugx,
       narrative,
       externalRef: orderRef,
-      providerRef: "BULAWIFI"
+      providerRef: bizPrefix.replace(/\s+/g, "").toUpperCase()
     });
 
     // Update order with Yo Payments reference
