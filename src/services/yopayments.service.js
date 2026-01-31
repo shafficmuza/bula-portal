@@ -140,15 +140,23 @@ async function initiateCollection({ msisdn, amount, narrative, externalRef, prov
   // Format phone number (ensure 256 prefix)
   const formattedMsisdn = formatMsisdn(msisdn);
 
+  // Build params - ExternalReference can cause issues in sandbox, so only include narrative
   const params = {
     NonBlocking: "TRUE",
     Amount: amount,
     Account: formattedMsisdn,
-    Narrative: narrative || "Bula WiFi Voucher",
-    ExternalReference: externalRef,
-    InternalReference: externalRef,
-    ProviderReferenceText: providerRef || "BULAWIFI"
+    Narrative: narrative || "Bula WiFi Voucher"
   };
+
+  // Only add optional parameters if provided and we're in live mode
+  if (creds.environment === "live") {
+    if (externalRef) {
+      params.ExternalReference = externalRef;
+    }
+    if (providerRef) {
+      params.ProviderReferenceText = providerRef;
+    }
+  }
 
   const xml = buildXmlRequest("acdepositfunds", params, creds);
 
