@@ -132,7 +132,7 @@ router.post("/init", async (req, res) => {
     // Create order
     await portalDB.query(
       `INSERT INTO orders (order_ref, customer_id, plan_id, username, password, amount_ugx, status, payment_provider, customer_mac, customer_ip, mikrotik_login_url)
-       VALUES (?, ?, ?, ?, ?, ?, 'PENDING', 'YOPAYMENTS', ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, 'PENDING', 'YO', ?, ?, ?)`,
       [orderRef, customerId, plan.id, voucherCode, voucherCode, plan.price_ugx, normalizedMac, customerIp || null, linkLogin || null]
     );
 
