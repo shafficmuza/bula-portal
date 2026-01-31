@@ -121,10 +121,11 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Vendor</label>
-            <select id="deviceVendor" class="form-input">
+            <select id="deviceVendor" class="form-input" onchange="onVendorChange()">
               <option value="mikrotik">MikroTik</option>
               <option value="ubiquiti">Ubiquiti</option>
               <option value="cisco">Cisco</option>
+              <option value="tplink">TP-Link</option>
               <option value="other">Other</option>
             </select>
           </div>
@@ -135,6 +136,80 @@
             </select>
             <div class="form-hint"><a href="/admin/locations" target="_blank">Manage locations</a></div>
           </div>
+        </div>
+
+        <!-- Ubiquiti-specific options -->
+        <div id="ubiquitiOptions" style="display: none;">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Device Model</label>
+              <select id="ubiquitiModel" class="form-input" onchange="onUbiquitiModelChange()">
+                <option value="">-- Select Model --</option>
+                <optgroup label="UniFi Access Points - WiFi 6">
+                  <option value="U6-PRO">UniFi 6 Pro</option>
+                  <option value="U6-LITE">UniFi 6 Lite</option>
+                  <option value="U6-LR">UniFi 6 Long-Range</option>
+                  <option value="U6-MESH">UniFi 6 Mesh</option>
+                  <option value="U6-ENTERPRISE">UniFi 6 Enterprise</option>
+                  <option value="U6-IW">UniFi 6 In-Wall</option>
+                </optgroup>
+                <optgroup label="UniFi Access Points - WiFi 5">
+                  <option value="UAP-AC-M-PRO">UniFi AP AC Mesh Pro</option>
+                  <option value="UAP-AC-M">UniFi AP AC Mesh</option>
+                  <option value="UAP-AC-PRO">UniFi AP AC Pro</option>
+                  <option value="UAP-AC-LITE">UniFi AP AC Lite</option>
+                  <option value="UAP-AC-LR">UniFi AP AC Long Range</option>
+                  <option value="UAP-AC-HD">UniFi AP AC HD</option>
+                  <option value="UAP-NANOHD">UniFi nanoHD</option>
+                  <option value="UAP-FLEXHD">UniFi FlexHD</option>
+                </optgroup>
+                <optgroup label="UniFi Gateways">
+                  <option value="UDM">UniFi Dream Machine</option>
+                  <option value="UDM-PRO">UniFi Dream Machine Pro</option>
+                  <option value="UDM-SE">UniFi Dream Machine SE</option>
+                  <option value="UDR">UniFi Dream Router</option>
+                  <option value="UXG-PRO">UniFi Next-Gen Gateway Pro</option>
+                  <option value="USG">UniFi Security Gateway</option>
+                  <option value="USG-PRO-4">UniFi Security Gateway Pro</option>
+                </optgroup>
+                <optgroup label="UniFi Switches">
+                  <option value="USW-PRO-24-POE">UniFi Switch Pro 24 PoE</option>
+                  <option value="USW-PRO-48-POE">UniFi Switch Pro 48 PoE</option>
+                </optgroup>
+                <optgroup label="EdgeMAX">
+                  <option value="ER-X">EdgeRouter X</option>
+                  <option value="ER-4">EdgeRouter 4</option>
+                  <option value="ER-6P">EdgeRouter 6P</option>
+                  <option value="ER-12">EdgeRouter 12</option>
+                </optgroup>
+                <optgroup label="airMAX">
+                  <option value="LAP-120">LiteAP AC</option>
+                  <option value="LBE-5AC-GEN2">LiteBeam 5AC Gen2</option>
+                  <option value="NBE-5AC-GEN2">NanoBeam 5AC Gen2</option>
+                  <option value="PBE-5AC-GEN2">PowerBeam 5AC Gen2</option>
+                </optgroup>
+                <optgroup label="Other">
+                  <option value="OTHER">Other Ubiquiti Device</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Model Info</label>
+              <div id="ubiquitiModelInfo" class="form-hint" style="padding: 8px; background: var(--bg); border-radius: var(--radius-sm);">
+                Select a model to see capabilities
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <button type="button" class="btn btn--sm" onclick="testUbiquitiDevice()">
+              <i data-lucide="wifi"></i> Test Device Connection
+            </button>
+            <button type="button" class="btn btn--sm" onclick="showUbiquitiConfig()">
+              <i data-lucide="book-open"></i> Configuration Guide
+            </button>
+          </div>
+          <div id="ubiquitiTestResult" style="display: none; margin-top: 8px;"></div>
         </div>
 
         <div class="form-group">
@@ -758,6 +833,202 @@
     function closeDetailsModal() {
       document.getElementById('detailsModal').classList.remove('active');
       currentDeviceId = null;
+    }
+
+    // ============ Ubiquiti-specific functions ============
+
+    // Show/hide Ubiquiti options based on vendor selection
+    function onVendorChange() {
+      const vendor = document.getElementById('deviceVendor').value;
+      const ubiquitiOptions = document.getElementById('ubiquitiOptions');
+
+      if (vendor === 'ubiquiti') {
+        ubiquitiOptions.style.display = 'block';
+      } else {
+        ubiquitiOptions.style.display = 'none';
+      }
+    }
+
+    // Handle Ubiquiti model change
+    function onUbiquitiModelChange() {
+      const model = document.getElementById('ubiquitiModel').value;
+      const infoDiv = document.getElementById('ubiquitiModelInfo');
+
+      if (!model) {
+        infoDiv.innerHTML = 'Select a model to see capabilities';
+        return;
+      }
+
+      // Fetch model info
+      fetch('/admin/api/devices/meta/ubiquiti-models', { credentials: 'same-origin' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok && data.models[model]) {
+            const m = data.models[model];
+            const supports = [];
+            if (m.supports?.radius) supports.push('RADIUS');
+            if (m.supports?.hotspot) supports.push('Hotspot');
+            if (m.supports?.vlan) supports.push('VLAN');
+            if (m.supports?.wifi6) supports.push('WiFi 6');
+            if (m.supports?.mesh) supports.push('Mesh');
+
+            infoDiv.innerHTML = `
+              <strong>${m.name}</strong><br>
+              <span style="color: var(--text-muted);">${m.notes || ''}</span><br>
+              <span style="font-size: 0.75rem;">Supports: ${supports.join(', ')}</span>
+            `;
+          }
+        })
+        .catch(e => {
+          infoDiv.innerHTML = 'Could not load model info';
+        });
+    }
+
+    // Test Ubiquiti device connection
+    async function testUbiquitiDevice() {
+      const ip = document.getElementById('deviceIp').value.trim();
+      const resultDiv = document.getElementById('ubiquitiTestResult');
+
+      if (!ip) {
+        alert('Please enter the device IP address first');
+        return;
+      }
+
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = '<span style="color: var(--text-muted);">Testing connection...</span>';
+
+      try {
+        const res = await fetch('/admin/api/devices/ubiquiti/test-device', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ ip_address: ip })
+        });
+        const data = await res.json();
+
+        if (data.ok && data.result.success) {
+          resultDiv.innerHTML = `<span style="color: #22c55e;">✓ Device is reachable</span>`;
+        } else {
+          resultDiv.innerHTML = `<span style="color: #ef4444;">✗ ${data.result?.message || 'Device unreachable'}</span>`;
+        }
+      } catch (e) {
+        resultDiv.innerHTML = `<span style="color: #ef4444;">✗ Test failed: ${e.message}</span>`;
+      }
+    }
+
+    // Show Ubiquiti configuration guide
+    async function showUbiquitiConfig() {
+      const model = document.getElementById('ubiquitiModel').value;
+      const ip = document.getElementById('deviceIp').value.trim();
+      const secret = document.getElementById('deviceSecret').value;
+
+      if (!model) {
+        alert('Please select a device model first');
+        return;
+      }
+
+      try {
+        const res = await fetch('/admin/api/devices/ubiquiti/radius-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            model,
+            radiusServer: window.location.hostname,
+            radiusPort: 1812,
+            radiusSecret: secret || 'YOUR_RADIUS_SECRET',
+            acctPort: 1813
+          })
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+          showConfigModal(data.instructions);
+        } else {
+          alert('Failed to load configuration: ' + (data.message || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Error loading configuration: ' + e.message);
+      }
+    }
+
+    // Show configuration modal
+    function showConfigModal(instructions) {
+      // Create modal HTML
+      const modalHtml = `
+        <div class="modal-overlay active" id="configModal" onclick="if(event.target===this)closeConfigModal()">
+          <div class="modal modal--lg">
+            <div class="modal-header">
+              <h3>${escapeHtml(instructions.title)}</h3>
+              <button class="modal-close" onclick="closeConfigModal()">
+                <i data-lucide="x"></i>
+              </button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+              ${instructions.steps.map(step => `
+                <div style="margin-bottom: 20px; padding: 16px; background: var(--bg); border-radius: var(--radius-sm); border-left: 3px solid var(--primary);">
+                  <h4 style="margin: 0 0 8px;">Step ${step.step}: ${escapeHtml(step.title)}</h4>
+                  <p style="margin: 0 0 12px; color: var(--text-muted);">${escapeHtml(step.description)}</p>
+                  ${step.config ? `
+                    <div style="background: var(--white); padding: 12px; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.875rem;">
+                      ${Object.entries(step.config).map(([key, val]) =>
+                        `<div><strong>${escapeHtml(key)}:</strong> ${typeof val === 'object' ? JSON.stringify(val) : escapeHtml(String(val))}</div>`
+                      ).join('')}
+                    </div>
+                  ` : ''}
+                  ${step.command ? `
+                    <pre style="background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: var(--radius-sm); overflow-x: auto; font-size: 0.8125rem;">${escapeHtml(step.command)}</pre>
+                  ` : ''}
+                </div>
+              `).join('')}
+
+              ${instructions.cliCommands ? `
+                <div style="margin-top: 20px;">
+                  <h4>Full CLI Commands (copy/paste)</h4>
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: var(--radius-sm); overflow-x: auto; font-size: 0.8125rem;">${escapeHtml(instructions.cliCommands)}</pre>
+                  <button class="btn btn--sm" onclick="copyCliCommands()">
+                    <i data-lucide="copy"></i> Copy Commands
+                  </button>
+                </div>
+              ` : ''}
+
+              <div style="margin-top: 20px; padding: 16px; background: #fef3c7; border-radius: var(--radius-sm);">
+                <h4 style="margin: 0 0 8px; color: #92400e;">Notes</h4>
+                <ul style="margin: 0; padding-left: 20px; color: #92400e;">
+                  ${instructions.notes.filter(n => n).map(note => `<li>${escapeHtml(note)}</li>`).join('')}
+                </ul>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn" onclick="closeConfigModal()">Close</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Store CLI commands for copy function
+      window.currentCliCommands = instructions.cliCommands;
+
+      // Add modal to page
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Close config modal
+    function closeConfigModal() {
+      const modal = document.getElementById('configModal');
+      if (modal) modal.remove();
+    }
+
+    // Copy CLI commands
+    function copyCliCommands() {
+      if (window.currentCliCommands) {
+        navigator.clipboard.writeText(window.currentCliCommands).then(() => {
+          alert('Commands copied to clipboard!');
+        }).catch(e => {
+          console.error('Copy failed:', e);
+        });
+      }
     }
 
     // Initialize

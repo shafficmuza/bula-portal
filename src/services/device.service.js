@@ -6,13 +6,50 @@ const { promisify } = require("util");
 const execAsync = promisify(exec);
 
 /**
- * Device/NAS vendor types
+ * Device/NAS vendor types with configuration details
  */
 const VENDOR_TYPES = {
-  mikrotik: { name: "MikroTik", ports: 1812 },
-  ubiquiti: { name: "Ubiquiti", ports: 1812 },
-  cisco: { name: "Cisco", ports: 1812 },
-  other: { name: "Other", ports: 1812 },
+  mikrotik: {
+    name: "MikroTik",
+    ports: 1812,
+    models: ["hAP", "RB750", "RB951", "RB2011", "CCR", "Other"],
+    supportsApi: true,
+    configMethod: "routeros",
+    icon: "router",
+  },
+  ubiquiti: {
+    name: "Ubiquiti",
+    ports: 1812,
+    models: ["UAP-AC-M-PRO", "UAP-AC-PRO", "UAP-AC-LITE", "U6-PRO", "USG", "UDM", "Other"],
+    supportsApi: true,
+    configMethod: "unifi-controller",
+    icon: "wifi",
+    requiresController: true,
+  },
+  cisco: {
+    name: "Cisco",
+    ports: 1812,
+    models: ["Catalyst", "ASR", "ISR", "Meraki", "Other"],
+    supportsApi: false,
+    configMethod: "cli",
+    icon: "server",
+  },
+  tplink: {
+    name: "TP-Link",
+    ports: 1812,
+    models: ["EAP", "Omada", "Archer", "Other"],
+    supportsApi: true,
+    configMethod: "omada",
+    icon: "wifi",
+  },
+  other: {
+    name: "Other",
+    ports: 1812,
+    models: ["Generic"],
+    supportsApi: false,
+    configMethod: "manual",
+    icon: "box",
+  },
 };
 
 /**

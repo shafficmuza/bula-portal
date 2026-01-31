@@ -10,6 +10,7 @@ const deviceService = require("../services/device.service");
 const settingsService = require("../services/settings.service");
 const paymentProviderService = require("../services/payment-provider.service");
 const mikrotikService = require("../services/mikrotik.service");
+const ubiquitiService = require("../services/ubiquiti.service");
 
 const router = express.Router();
 const ASSET_VERSION = Date.now();
@@ -480,6 +481,101 @@ router.delete("/api/devices/:id", requireAdmin, async (req, res) => {
 // Get vendor types
 router.get("/api/devices/meta/vendors", requireAdmin, async (req, res) => {
   res.json({ ok: true, vendors: deviceService.VENDOR_TYPES });
+});
+
+// Get Ubiquiti models
+router.get("/api/devices/meta/ubiquiti-models", requireAdmin, async (req, res) => {
+  res.json({ ok: true, models: ubiquitiService.UBIQUITI_MODELS });
+});
+
+// Test Ubiquiti device connection
+router.post("/api/devices/ubiquiti/test-device", requireAdmin, async (req, res) => {
+  try {
+    const { ip_address } = req.body;
+    if (!ip_address) {
+      return res.status(400).json({ ok: false, message: "IP address required" });
+    }
+
+    const result = await ubiquitiService.testDeviceConnection(ip_address);
+    res.json({ ok: true, result });
+  } catch (e) {
+    console.error("Ubiquiti device test error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Test UniFi Controller connection
+router.post("/api/devices/ubiquiti/test-controller", requireAdmin, async (req, res) => {
+  try {
+    const { controllerUrl, username, password, site } = req.body;
+    if (!controllerUrl || !username || !password) {
+      return res.status(400).json({ ok: false, message: "Controller URL, username, and password required" });
+    }
+
+    const result = await ubiquitiService.testControllerConnection({
+      controllerUrl,
+      username,
+      password,
+      site: site || "default",
+    });
+    res.json({ ok: true, result });
+  } catch (e) {
+    console.error("UniFi controller test error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get RADIUS configuration instructions for Ubiquiti
+router.post("/api/devices/ubiquiti/radius-config", requireAdmin, async (req, res) => {
+  try {
+    const { model, radiusServer, radiusPort, radiusSecret, acctPort } = req.body;
+    if (!model || !radiusServer || !radiusSecret) {
+      return res.status(400).json({ ok: false, message: "Model, RADIUS server, and secret required" });
+    }
+
+    const instructions = ubiquitiService.getRadiusConfigInstructions(model, {
+      radiusServer,
+      radiusPort: radiusPort || 1812,
+      radiusSecret,
+      acctPort: acctPort || 1813,
+    });
+    res.json({ ok: true, instructions });
+  } catch (e) {
+    console.error("RADIUS config instructions error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get Hotspot configuration instructions for Ubiquiti
+router.post("/api/devices/ubiquiti/hotspot-config", requireAdmin, async (req, res) => {
+  try {
+    const { model, portalUrl, redirectUrl, radiusServer, radiusSecret } = req.body;
+    if (!model || !portalUrl || !radiusServer) {
+      return res.status(400).json({ ok: false, message: "Model, portal URL, and RADIUS server required" });
+    }
+
+    const instructions = ubiquitiService.getHotspotConfigInstructions(model, {
+      portalUrl,
+      redirectUrl,
+      radiusServer,
+      radiusSecret,
+    });
+    res.json({ ok: true, instructions });
+  } catch (e) {
+    console.error("Hotspot config instructions error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Validate Ubiquiti device configuration
+router.post("/api/devices/ubiquiti/validate", requireAdmin, async (req, res) => {
+  try {
+    const result = ubiquitiService.validateConfig(req.body);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    console.error("Ubiquiti validate error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
 });
 
 // ============ LOCATION API ENDPOINTS ============
