@@ -4,8 +4,28 @@ const { nanoid } = require("nanoid");
 
 const portalDB = require("../config/db.portal");
 const { activateVoucher } = require("../services/radius.service");
+const paymentProviderService = require("../services/payment-provider.service");
 
 const router = express.Router();
+
+/**
+ * GET /api/portal/payment-providers
+ * Returns list of enabled payment providers for the portal
+ */
+router.get("/payment-providers", async (req, res, next) => {
+  try {
+    const providers = await paymentProviderService.getEnabledProviders();
+    res.json({
+      ok: true,
+      providers: providers.map(p => ({
+        provider_code: p.provider_code,
+        display_name: p.display_name
+      }))
+    });
+  } catch (e) {
+    next(e);
+  }
+});
 
 /**
  * GET /api/portal/plans

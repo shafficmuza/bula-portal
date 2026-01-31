@@ -525,6 +525,7 @@
 
   <script>
     let selectedPlan = null;
+    let enabledProvider = null; // Will be set after fetching enabled providers
 
     // MikroTik hotspot parameters (passed from server)
     const customerMac = '<%= customerMac || "" %>';
@@ -538,6 +539,25 @@
     }
     if (customerMac) {
       localStorage.setItem('customer_mac', customerMac);
+    }
+
+    // Fetch enabled payment provider
+    async function loadEnabledProvider() {
+      try {
+        const response = await fetch('/api/portal/payment-providers');
+        const data = await response.json();
+        if (data.ok && data.providers && data.providers.length > 0) {
+          // Use the first enabled provider (prioritize yopayments for mobile money)
+          const yoPay = data.providers.find(p => p.provider_code === 'yopayments');
+          const flw = data.providers.find(p => p.provider_code === 'flutterwave');
+          enabledProvider = yoPay || flw || data.providers[0];
+          console.log('Enabled payment provider:', enabledProvider.provider_code);
+        } else {
+          console.warn('No payment providers enabled');
+        }
+      } catch (e) {
+        console.error('Error loading payment providers:', e);
+      }
     }
 
     // Load plans
@@ -639,6 +659,11 @@
         return;
       }
 
+      if (!enabledProvider) {
+        showAlert('No payment provider available. Please contact support.', 'error');
+        return;
+      }
+
       const msisdn = document.getElementById('phoneNumber').value.trim();
       if (!msisdn || !/^256\d{9}$/.test(msisdn)) {
         showAlert('Enter a valid Uganda phone number (2567XXXXXXXX)', 'error');
@@ -649,8 +674,14 @@
       btn.disabled = true;
       btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Processing...';
 
+      // Determine API endpoint based on enabled provider
+      const providerCode = enabledProvider.provider_code;
+      const apiEndpoint = providerCode === 'yopayments'
+        ? '/api/payments/yopayments/init'
+        : '/api/payments/flutterwave/init';
+
       try {
-        const response = await fetch('/api/payments/flutterwave/init', {
+        const response = await fetch(apiEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -664,23 +695,38 @@
 
         const data = await response.json();
 
-        if (data.ok && data.paymentLink) {
+        if (data.ok) {
           localStorage.setItem('last_order_ref', data.orderRef);
-          window.location.href = data.paymentLink;
+
+          // Different redirect behavior based on provider
+          if (providerCode === 'yopayments') {
+            // Yo Payments uses a pending page with polling
+            window.location.href = `/payment-pending?orderRef=${data.orderRef}`;
+          } else if (data.paymentLink) {
+            // Flutterwave redirects to external payment page
+            window.location.href = data.paymentLink;
+          } else {
+            showAlert(data.message || 'Payment initialization failed', 'error');
+            resetPurchaseButton(btn);
+          }
         } else {
           showAlert(data.message || 'Payment initialization failed', 'error');
-          btn.disabled = false;
-          btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg> Buy Selected Plan';
+          resetPurchaseButton(btn);
         }
       } catch (e) {
         showAlert('Error initializing payment. Please try again.', 'error');
-        btn.disabled = false;
-        btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg> Buy Selected Plan';
+        resetPurchaseButton(btn);
       }
     });
 
-    // Load plans on page load
+    function resetPurchaseButton(btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg> Buy Selected Plan';
+    }
+
+    // Load plans and enabled provider on page load
     loadPlans();
+    loadEnabledProvider();
   </script>
 </body>
 </html>
