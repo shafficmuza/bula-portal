@@ -159,12 +159,16 @@ router.post("/init", async (req, res) => {
 
     // Get business settings for narrative
     const settings = await settingsService.getSettings();
-    const businessName = settings.business_name || "Bula";
+    const businessName = settings.business_name || "Bula WiFi";
     // Extract first word of business name
     const bizPrefix = businessName.split(/\s+/)[0];
+    // Check if business name already contains WiFi
+    const hasWifi = /wifi/i.test(businessName);
 
-    // Build descriptive narrative: "BUULAS WiFi 4 Hours @500UGX"
-    const narrative = `${bizPrefix} WiFi ${plan.name} @${plan.price_ugx}UGX`;
+    // Build descriptive narrative: "Buula's 4 Hours @500UGX" or "ACME WiFi 4 Hours @500UGX"
+    const narrative = hasWifi
+      ? `${bizPrefix} ${plan.name} @${plan.price_ugx}UGX`
+      : `${bizPrefix} WiFi ${plan.name} @${plan.price_ugx}UGX`;
 
     const yoResult = await yoPaymentsService.initiateCollection({
       msisdn,
