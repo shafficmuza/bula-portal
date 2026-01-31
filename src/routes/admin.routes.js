@@ -11,6 +11,7 @@ const settingsService = require("../services/settings.service");
 const paymentProviderService = require("../services/payment-provider.service");
 const mikrotikService = require("../services/mikrotik.service");
 const ubiquitiService = require("../services/ubiquiti.service");
+const ciscoService = require("../services/cisco.service");
 
 const router = express.Router();
 const ASSET_VERSION = Date.now();
@@ -574,6 +575,82 @@ router.post("/api/devices/ubiquiti/validate", requireAdmin, async (req, res) => 
     res.json({ ok: true, ...result });
   } catch (e) {
     console.error("Ubiquiti validate error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// ============ CISCO DEVICE API ENDPOINTS ============
+
+// Get Cisco models
+router.get("/api/devices/meta/cisco-models", requireAdmin, async (req, res) => {
+  res.json({ ok: true, models: ciscoService.CISCO_MODELS, categories: ciscoService.CISCO_CATEGORIES });
+});
+
+// Test Cisco device connection
+router.post("/api/devices/cisco/test-device", requireAdmin, async (req, res) => {
+  try {
+    const { ip_address } = req.body;
+    if (!ip_address) {
+      return res.status(400).json({ ok: false, message: "IP address required" });
+    }
+
+    const result = await ciscoService.testDeviceConnection(ip_address);
+    res.json({ ok: true, result });
+  } catch (e) {
+    console.error("Cisco device test error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get RADIUS configuration instructions for Cisco
+router.post("/api/devices/cisco/radius-config", requireAdmin, async (req, res) => {
+  try {
+    const { model, radiusServer, radiusPort, radiusSecret, acctPort } = req.body;
+    if (!model || !radiusServer || !radiusSecret) {
+      return res.status(400).json({ ok: false, message: "Model, RADIUS server, and secret required" });
+    }
+
+    const instructions = ciscoService.getRadiusConfigInstructions(model, {
+      radiusServer,
+      radiusPort: radiusPort || 1812,
+      radiusSecret,
+      acctPort: acctPort || 1813,
+    });
+    res.json({ ok: true, instructions });
+  } catch (e) {
+    console.error("Cisco RADIUS config instructions error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get Hotspot configuration instructions for Cisco
+router.post("/api/devices/cisco/hotspot-config", requireAdmin, async (req, res) => {
+  try {
+    const { model, portalUrl, redirectUrl, radiusServer, radiusSecret } = req.body;
+    if (!model || !portalUrl || !radiusServer) {
+      return res.status(400).json({ ok: false, message: "Model, portal URL, and RADIUS server required" });
+    }
+
+    const instructions = ciscoService.getHotspotConfigInstructions(model, {
+      portalUrl,
+      redirectUrl,
+      radiusServer,
+      radiusSecret,
+    });
+    res.json({ ok: true, instructions });
+  } catch (e) {
+    console.error("Cisco hotspot config instructions error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Validate Cisco device configuration
+router.post("/api/devices/cisco/validate", requireAdmin, async (req, res) => {
+  try {
+    const result = ciscoService.validateConfig(req.body);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    console.error("Cisco validate error:", e);
     res.status(500).json({ ok: false, message: e.message });
   }
 });

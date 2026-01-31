@@ -212,6 +212,100 @@
           <div id="ubiquitiTestResult" style="display: none; margin-top: 8px;"></div>
         </div>
 
+        <!-- Cisco-specific options -->
+        <div id="ciscoOptions" style="display: none;">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Device Model</label>
+              <select id="ciscoModel" class="form-input" onchange="onCiscoModelChange()">
+                <option value="">-- Select Model --</option>
+                <optgroup label="Wireless Access Points - WiFi 6/6E">
+                  <option value="C9166I">Catalyst 9166I (WiFi 6E)</option>
+                  <option value="C9136I">Catalyst 9136I (WiFi 6E)</option>
+                  <option value="C9130AXI">Catalyst 9130AXI (WiFi 6)</option>
+                  <option value="C9120AXI">Catalyst 9120AXI (WiFi 6)</option>
+                  <option value="C9115AXI">Catalyst 9115AXI (WiFi 6)</option>
+                  <option value="C9105AXI">Catalyst 9105AXI (WiFi 6)</option>
+                </optgroup>
+                <optgroup label="Wireless Access Points - Aironet">
+                  <option value="AIR-AP4800">Aironet 4800</option>
+                  <option value="AIR-AP3802I">Aironet 3802i</option>
+                  <option value="AIR-AP2802I">Aironet 2802i</option>
+                  <option value="AIR-AP1852I">Aironet 1852i</option>
+                  <option value="AIR-AP1832I">Aironet 1832i</option>
+                </optgroup>
+                <optgroup label="Wireless LAN Controllers">
+                  <option value="C9800-80">Catalyst 9800-80 WLC</option>
+                  <option value="C9800-40">Catalyst 9800-40 WLC</option>
+                  <option value="C9800-CL">Catalyst 9800-CL (Virtual)</option>
+                  <option value="EWC">Embedded Wireless Controller</option>
+                  <option value="WLC-8540">WLC 8540</option>
+                  <option value="WLC-5520">WLC 5520</option>
+                  <option value="WLC-3504">WLC 3504</option>
+                </optgroup>
+                <optgroup label="Meraki Cloud-Managed">
+                  <option value="MR56">Meraki MR56</option>
+                  <option value="MR46">Meraki MR46</option>
+                  <option value="MR44">Meraki MR44</option>
+                  <option value="MR36">Meraki MR36</option>
+                  <option value="MR86">Meraki MR86 (Outdoor)</option>
+                  <option value="MR76">Meraki MR76 (Outdoor)</option>
+                  <option value="MX68">Meraki MX68 (Gateway)</option>
+                  <option value="MX67">Meraki MX67 (Gateway)</option>
+                  <option value="MS225">Meraki MS225 (Switch)</option>
+                  <option value="MS120">Meraki MS120 (Switch)</option>
+                </optgroup>
+                <optgroup label="Routers">
+                  <option value="C8300">Catalyst 8300 Edge</option>
+                  <option value="C8200">Catalyst 8200 Edge</option>
+                  <option value="ISR-4461">ISR 4461</option>
+                  <option value="ISR-4351">ISR 4351</option>
+                  <option value="ISR-4331">ISR 4331</option>
+                  <option value="ISR-4321">ISR 4321</option>
+                  <option value="ISR-1100">ISR 1100 Series</option>
+                </optgroup>
+                <optgroup label="Switches">
+                  <option value="C9500">Catalyst 9500</option>
+                  <option value="C9400">Catalyst 9400</option>
+                  <option value="C9300">Catalyst 9300</option>
+                  <option value="C9200">Catalyst 9200</option>
+                  <option value="C3850">Catalyst 3850</option>
+                  <option value="C3650">Catalyst 3650</option>
+                  <option value="CBS350">CBS350 Managed</option>
+                  <option value="CBS250">CBS250 Smart</option>
+                </optgroup>
+                <optgroup label="Firewalls/Security">
+                  <option value="FPR-4110">Firepower 4110</option>
+                  <option value="FPR-2110">Firepower 2110</option>
+                  <option value="FPR-1010">Firepower 1010</option>
+                  <option value="ASA-5516">ASA 5516-X</option>
+                  <option value="ASA-5508">ASA 5508-X</option>
+                  <option value="ASA-5506">ASA 5506-X</option>
+                </optgroup>
+                <optgroup label="Other">
+                  <option value="OTHER">Other Cisco Device</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Model Info</label>
+              <div id="ciscoModelInfo" class="form-hint" style="padding: 8px; background: var(--bg); border-radius: var(--radius-sm);">
+                Select a model to see capabilities
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <button type="button" class="btn btn--sm" onclick="testCiscoDevice()">
+              <i data-lucide="wifi"></i> Test Device Connection
+            </button>
+            <button type="button" class="btn btn--sm" onclick="showCiscoConfig()">
+              <i data-lucide="book-open"></i> Configuration Guide
+            </button>
+          </div>
+          <div id="ciscoTestResult" style="display: none; margin-top: 8px;"></div>
+        </div>
+
         <div class="form-group">
           <label class="form-label">Description</label>
           <textarea id="deviceDescription" class="form-input" rows="2" placeholder="Optional notes about this device"></textarea>
@@ -835,19 +929,27 @@
       currentDeviceId = null;
     }
 
-    // ============ Ubiquiti-specific functions ============
+    // ============ Vendor-specific functions ============
 
-    // Show/hide Ubiquiti options based on vendor selection
+    // Show/hide vendor-specific options based on vendor selection
     function onVendorChange() {
       const vendor = document.getElementById('deviceVendor').value;
       const ubiquitiOptions = document.getElementById('ubiquitiOptions');
+      const ciscoOptions = document.getElementById('ciscoOptions');
 
+      // Hide all vendor options first
+      ubiquitiOptions.style.display = 'none';
+      ciscoOptions.style.display = 'none';
+
+      // Show selected vendor options
       if (vendor === 'ubiquiti') {
         ubiquitiOptions.style.display = 'block';
-      } else {
-        ubiquitiOptions.style.display = 'none';
+      } else if (vendor === 'cisco') {
+        ciscoOptions.style.display = 'block';
       }
     }
+
+    // ============ Ubiquiti-specific functions ============
 
     // Handle Ubiquiti model change
     function onUbiquitiModelChange() {
@@ -1028,6 +1130,126 @@
         }).catch(e => {
           console.error('Copy failed:', e);
         });
+      }
+    }
+
+    // ============ Cisco-specific functions ============
+
+    // Handle Cisco model change
+    function onCiscoModelChange() {
+      const model = document.getElementById('ciscoModel').value;
+      const infoDiv = document.getElementById('ciscoModelInfo');
+
+      if (!model) {
+        infoDiv.innerHTML = 'Select a model to see capabilities';
+        return;
+      }
+
+      // Fetch model info
+      fetch('/admin/api/devices/meta/cisco-models', { credentials: 'same-origin' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok && data.models[model]) {
+            const m = data.models[model];
+            const supports = [];
+            if (m.supports?.radius) supports.push('RADIUS');
+            if (m.supports?.wpa2_enterprise) supports.push('WPA2-Enterprise');
+            if (m.supports?.wpa3) supports.push('WPA3');
+            if (m.supports?.wifi6) supports.push('WiFi 6');
+            if (m.supports?.wifi6e) supports.push('WiFi 6E');
+            if (m.supports?.vlan) supports.push('VLAN');
+            if (m.supports?.dot1x) supports.push('802.1X');
+            if (m.supports?.guestPortal) supports.push('Guest Portal');
+
+            const category = data.categories[m.category]?.name || m.category;
+            const configMethod = {
+              'ios': 'IOS CLI',
+              'ios-xe': 'IOS-XE CLI',
+              'aireos': 'AireOS WLC',
+              'meraki-dashboard': 'Meraki Dashboard',
+              'asa': 'ASA CLI',
+              'fmc': 'Firepower MC',
+              'web': 'Web Interface'
+            }[m.configMethod] || m.configMethod;
+
+            infoDiv.innerHTML = `
+              <strong>${m.name}</strong><br>
+              <span style="color: var(--text-muted);">${category} - ${configMethod}</span><br>
+              <span style="font-size: 0.75rem;">Supports: ${supports.join(', ')}</span><br>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">${m.notes || ''}</span>
+            `;
+          }
+        })
+        .catch(e => {
+          infoDiv.innerHTML = 'Could not load model info';
+        });
+    }
+
+    // Test Cisco device connection
+    async function testCiscoDevice() {
+      const ip = document.getElementById('deviceIp').value.trim();
+      const resultDiv = document.getElementById('ciscoTestResult');
+
+      if (!ip) {
+        alert('Please enter the device IP address first');
+        return;
+      }
+
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = '<span style="color: var(--text-muted);">Testing connection...</span>';
+
+      try {
+        const res = await fetch('/admin/api/devices/cisco/test-device', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ ip_address: ip })
+        });
+        const data = await res.json();
+
+        if (data.ok && data.result.success) {
+          resultDiv.innerHTML = `<span style="color: #22c55e;">✓ ${data.result.message}</span>`;
+        } else {
+          resultDiv.innerHTML = `<span style="color: #ef4444;">✗ ${data.result?.message || 'Device unreachable'}</span>`;
+        }
+      } catch (e) {
+        resultDiv.innerHTML = `<span style="color: #ef4444;">✗ Test failed: ${e.message}</span>`;
+      }
+    }
+
+    // Show Cisco configuration guide
+    async function showCiscoConfig() {
+      const model = document.getElementById('ciscoModel').value;
+      const ip = document.getElementById('deviceIp').value.trim();
+      const secret = document.getElementById('deviceSecret').value;
+
+      if (!model) {
+        alert('Please select a device model first');
+        return;
+      }
+
+      try {
+        const res = await fetch('/admin/api/devices/cisco/radius-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            model,
+            radiusServer: window.location.hostname,
+            radiusPort: 1812,
+            radiusSecret: secret || 'YOUR_RADIUS_SECRET',
+            acctPort: 1813
+          })
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+          showConfigModal(data.instructions);
+        } else {
+          alert('Failed to load configuration: ' + (data.message || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Error loading configuration: ' + e.message);
       }
     }
 
