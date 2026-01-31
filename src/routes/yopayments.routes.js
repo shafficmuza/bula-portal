@@ -159,19 +159,19 @@ router.post("/init", async (req, res) => {
 
     // Get business settings for narrative
     const settings = await settingsService.getSettings();
-    const businessName = settings.business_name || "Bula WiFi";
-    // Create short business prefix (first 10 chars)
-    const bizPrefix = businessName.substring(0, 10).trim();
+    const businessName = settings.business_name || "Bula";
+    // Extract first word of business name
+    const bizPrefix = businessName.split(/\s+/)[0];
 
-    // Build descriptive narrative: "BUULAS WiFi 4Hours@500UGX"
-    const narrative = `${bizPrefix} WiFi ${plan.name}@${plan.price_ugx}UGX`;
+    // Build descriptive narrative: "BUULAS WiFi 4 Hours @500UGX"
+    const narrative = `${bizPrefix} WiFi ${plan.name} @${plan.price_ugx}UGX`;
 
     const yoResult = await yoPaymentsService.initiateCollection({
       msisdn,
       amount: plan.price_ugx,
       narrative,
       externalRef: orderRef,
-      providerRef: bizPrefix.replace(/\s+/g, "").toUpperCase()
+      providerRef: bizPrefix.toUpperCase()
     });
 
     // Update order with Yo Payments reference
