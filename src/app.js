@@ -100,6 +100,22 @@ app.get("/portal", async (req, res) => {
   });
 });
 
+// Payment Pending Page (for Yo Payments polling)
+app.get("/payment-pending", async (req, res) => {
+  const { orderRef } = req.query;
+  if (!orderRef) {
+    return res.redirect("/portal");
+  }
+
+  const settings = await settingsService.getSettings();
+  res.render("payment-pending", {
+    settings,
+    orderRef,
+    message: "Please check your phone and approve the payment to continue.",
+    checkUrl: `/api/payments/yopayments/status/${orderRef}`
+  });
+});
+
 app.use("/api/portal", portalRoutes);
 app.use("/api/payments/flutterwave", require("./routes/flutterwave.routes"));
 app.use("/api/payments/yopayments", require("./routes/yopayments.routes"));
