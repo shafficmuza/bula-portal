@@ -40,3 +40,6 @@ CREATE TABLE IF NOT EXISTS mac_bindings (
 
 -- Add index on orders for MAC lookup
 CREATE INDEX IF NOT EXISTS idx_orders_customer_mac ON orders(customer_mac);
+
+-- Fix provider_tx_id column size for Yo Payments transaction references
+ALTER TABLE orders MODIFY COLUMN provider_tx_id VARCHAR(150);
