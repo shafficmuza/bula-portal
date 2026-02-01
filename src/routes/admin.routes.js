@@ -13,6 +13,7 @@ const mikrotikService = require("../services/mikrotik.service");
 const ubiquitiService = require("../services/ubiquiti.service");
 const ciscoService = require("../services/cisco.service");
 const voucherSecurity = require("../services/voucher-security.service");
+const usageService = require("../services/usage.service");
 
 const router = express.Router();
 const ASSET_VERSION = Date.now();
@@ -164,6 +165,155 @@ router.get("/settings", requireAdmin, async (req, res) => {
 // Finance page
 router.get("/finance", requireAdmin, async (req, res) => {
   res.render("admin/finance", { admin: req.session.admin, assetVersion: ASSET_VERSION });
+});
+
+// Sessions/Usage page
+router.get("/sessions", requireAdmin, async (req, res) => {
+  res.render("admin/sessions", { admin: req.session.admin, assetVersion: ASSET_VERSION });
+});
+
+// ============ USAGE TRACKING API ENDPOINTS ============
+
+// Get usage summary/dashboard stats
+router.get("/api/usage/summary", requireAdmin, async (req, res) => {
+  try {
+    const period = req.query.period || 'today';
+    const summary = await usageService.getUsageSummary(period);
+    res.json({ ok: true, ...summary });
+  } catch (e) {
+    console.error("Get usage summary error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get active sessions
+router.get("/api/usage/active-sessions", requireAdmin, async (req, res) => {
+  try {
+    const options = {
+      limit: Math.min(100, parseInt(req.query.limit) || 50),
+      offset: parseInt(req.query.offset) || 0,
+      search: req.query.search || null,
+      nasIp: req.query.nas_ip || null
+    };
+
+    const result = await usageService.getActiveSessions(options);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    console.error("Get active sessions error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get session history
+router.get("/api/usage/history", requireAdmin, async (req, res) => {
+  try {
+    const options = {
+      limit: Math.min(100, parseInt(req.query.limit) || 50),
+      offset: parseInt(req.query.offset) || 0,
+      search: req.query.search || null,
+      username: req.query.username || null,
+      dateFrom: req.query.date_from || null,
+      dateTo: req.query.date_to || null
+    };
+
+    const result = await usageService.getSessionHistory(options);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    console.error("Get session history error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get top users by data usage
+router.get("/api/usage/top-users", requireAdmin, async (req, res) => {
+  try {
+    const options = {
+      limit: Math.min(100, parseInt(req.query.limit) || 50),
+      period: req.query.period || 'all',
+      sortBy: req.query.sort || 'total'
+    };
+
+    const users = await usageService.getTopUsers(options);
+    res.json({ ok: true, users });
+  } catch (e) {
+    console.error("Get top users error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get detailed usage for a specific user
+router.get("/api/usage/user/:username", requireAdmin, async (req, res) => {
+  try {
+    const details = await usageService.getUserUsageDetails(req.params.username);
+    res.json({ ok: true, ...details });
+  } catch (e) {
+    console.error("Get user usage error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Disconnect a user
+router.post("/api/usage/disconnect/:username", requireAdmin, async (req, res) => {
+  try {
+    const result = await usageService.disconnectUser(req.params.username);
+    res.json({ ok: result.success, message: result.message || result.error });
+  } catch (e) {
+    console.error("Disconnect user error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Export usage data as CSV
+router.get("/api/usage/export", requireAdmin, async (req, res) => {
+  try {
+    const type = req.query.type || 'top-users';
+    const period = req.query.period || 'month';
+
+    let data = [];
+    let headers = [];
+    let filename = '';
+
+    if (type === 'top-users') {
+      const users = await usageService.getTopUsers({ limit: 500, period });
+      headers = ['Username', 'Plan', 'Sessions', 'Download', 'Upload', 'Total Data', 'Total Time', 'Last Session', 'Status'];
+      data = users.map(u => [
+        u.username,
+        u.plan_name || '-',
+        u.session_count,
+        u.total_download_formatted,
+        u.total_upload_formatted,
+        u.total_data_formatted,
+        u.total_time_formatted,
+        u.last_session ? new Date(u.last_session).toISOString() : '-',
+        u.is_online ? 'Online' : 'Offline'
+      ]);
+      filename = `usage-top-users-${period}-${Date.now()}.csv`;
+    } else if (type === 'sessions') {
+      const result = await usageService.getSessionHistory({ limit: 1000 });
+      headers = ['Username', 'Start Time', 'End Time', 'Duration', 'Download', 'Upload', 'Client IP', 'MAC', 'Terminate Cause'];
+      data = result.sessions.map(s => [
+        s.username,
+        s.acctstarttime ? new Date(s.acctstarttime).toISOString() : '',
+        s.acctstoptime ? new Date(s.acctstoptime).toISOString() : '',
+        s.duration_formatted,
+        s.download_formatted,
+        s.upload_formatted,
+        s.client_ip || '',
+        s.mac_address || '',
+        s.acctterminatecause || ''
+      ]);
+      filename = `session-history-${Date.now()}.csv`;
+    }
+
+    const csv = [headers.join(','), ...data.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+    res.send(csv);
+  } catch (e) {
+    console.error("Export usage error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
 });
 
 // System Documentation page (software documentation)

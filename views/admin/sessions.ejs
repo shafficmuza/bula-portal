@@ -1,0 +1,871 @@
+<%- include("../partials/head", { title: "Sessions & Usage", assetVersion }) %>
+
+<body>
+  <div class="app">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <%- include("../partials/sidebar", { activeMenu: "sessions" }) %>
+
+    <div class="main">
+      <%- include("../partials/topbar", { admin }) %>
+
+      <div class="content">
+        <div class="page-title">
+          <h2>Sessions & Data Usage</h2>
+          <div class="muted">Monitor active sessions and track user data consumption</div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid--4" id="statsGrid">
+          <div class="card card--stat card--online">
+            <div class="card-title">Active Sessions</div>
+            <div class="card-value" id="statActive">-</div>
+            <div class="card-sub">Currently online</div>
+          </div>
+          <div class="card card--stat">
+            <div class="card-title">Today's Sessions</div>
+            <div class="card-value" id="statTodaySessions">-</div>
+            <div class="card-sub">Unique users</div>
+          </div>
+          <div class="card card--stat">
+            <div class="card-title">Today's Download</div>
+            <div class="card-value" id="statTodayDown">-</div>
+            <div class="card-sub">Total data received</div>
+          </div>
+          <div class="card card--stat">
+            <div class="card-title">Today's Upload</div>
+            <div class="card-value" id="statTodayUp">-</div>
+            <div class="card-sub">Total data sent</div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs mt-16">
+          <button class="tab active" onclick="switchTab('active')">Active Sessions</button>
+          <button class="tab" onclick="switchTab('top-users')">Top Users</button>
+          <button class="tab" onclick="switchTab('history')">Session History</button>
+        </div>
+
+        <!-- Active Sessions Tab -->
+        <div class="tab-content active" id="tab-active">
+          <div class="card">
+            <div class="card-head">
+              <h3>Active Sessions</h3>
+              <div class="card-actions">
+                <input type="text" id="activeSearch" class="form-input form-input--sm" placeholder="Search by username, IP, MAC..." onkeyup="debounceActiveSearch()">
+                <button class="btn btn--sm" onclick="loadActiveSessions()">
+                  <i data-lucide="refresh-cw"></i> Refresh
+                </button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Device</th>
+                    <th>Client IP</th>
+                    <th>MAC Address</th>
+                    <th>Duration</th>
+                    <th>Download</th>
+                    <th>Upload</th>
+                    <th>Total</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="activeSessionsTable">
+                  <tr><td colspan="9" class="muted text-center">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination" id="activePagination"></div>
+          </div>
+        </div>
+
+        <!-- Top Users Tab -->
+        <div class="tab-content" id="tab-top-users">
+          <div class="card">
+            <div class="card-head">
+              <h3>Top Users by Data Usage</h3>
+              <div class="card-actions">
+                <select id="topUsersPeriod" class="form-input form-input--sm" onchange="loadTopUsers()">
+                  <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month" selected>This Month</option>
+                  <option value="all">All Time</option>
+                </select>
+                <select id="topUsersSort" class="form-input form-input--sm" onchange="loadTopUsers()">
+                  <option value="total" selected>Sort by Total</option>
+                  <option value="download">Sort by Download</option>
+                  <option value="upload">Sort by Upload</option>
+                  <option value="sessions">Sort by Sessions</option>
+                  <option value="time">Sort by Time</option>
+                </select>
+                <button class="btn btn--sm" onclick="exportUsage('top-users')">
+                  <i data-lucide="download"></i> Export
+                </button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Username</th>
+                    <th>Plan</th>
+                    <th>Sessions</th>
+                    <th>Download</th>
+                    <th>Upload</th>
+                    <th>Total Data</th>
+                    <th>Total Time</th>
+                    <th>Last Session</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="topUsersTable">
+                  <tr><td colspan="10" class="muted text-center">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Session History Tab -->
+        <div class="tab-content" id="tab-history">
+          <div class="card">
+            <div class="card-head">
+              <h3>Session History</h3>
+              <div class="card-actions">
+                <input type="text" id="historySearch" class="form-input form-input--sm" placeholder="Search..." onkeyup="debounceHistorySearch()">
+                <input type="date" id="historyDateFrom" class="form-input form-input--sm" onchange="loadSessionHistory()">
+                <input type="date" id="historyDateTo" class="form-input form-input--sm" onchange="loadSessionHistory()">
+                <button class="btn btn--sm" onclick="exportUsage('sessions')">
+                  <i data-lucide="download"></i> Export
+                </button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Duration</th>
+                    <th>Download</th>
+                    <th>Upload</th>
+                    <th>Client IP</th>
+                    <th>Terminate Reason</th>
+                  </tr>
+                </thead>
+                <tbody id="historyTable">
+                  <tr><td colspan="8" class="muted text-center">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination" id="historyPagination"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Details Modal -->
+  <div class="modal-overlay" id="userModal">
+    <div class="modal modal--lg">
+      <div class="modal-header">
+        <h3 id="userModalTitle">User Details</h3>
+        <button class="modal-close" onclick="closeUserModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="userModalBody">
+        <div class="muted text-center">Loading...</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeUserModal()">Close</button>
+        <button class="btn btn--danger" onclick="disconnectCurrentUser()" id="disconnectBtn" style="display:none;">
+          <i data-lucide="wifi-off"></i> Disconnect User
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .card--online::before { background: #22c55e; }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .tab {
+      padding: 10px 20px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .tab:hover { background: var(--bg); }
+    .tab.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .form-input--sm {
+      padding: 6px 10px;
+      font-size: 0.8125rem;
+      min-width: 120px;
+    }
+
+    .status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-dot::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #9ca3af;
+    }
+    .status-dot.online::before {
+      background: #22c55e;
+      box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+    }
+    .status-dot.offline::before {
+      background: #9ca3af;
+    }
+
+    .data-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .data-bar-fill {
+      height: 6px;
+      background: var(--primary);
+      border-radius: 3px;
+      min-width: 4px;
+    }
+
+    .user-details-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .detail-card {
+      background: var(--bg);
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      text-align: center;
+    }
+    .detail-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .detail-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .sessions-mini-table {
+      font-size: 0.8125rem;
+    }
+    .sessions-mini-table th,
+    .sessions-mini-table td {
+      padding: 8px 12px;
+    }
+
+    .modal--lg { max-width: 900px; }
+
+    .action-btn {
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.75rem;
+    }
+    .action-btn:hover { background: var(--bg); }
+    .action-btn--danger {
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+    .action-btn--danger:hover { background: #fee2e2; }
+
+    .btn--danger {
+      background: #dc2626;
+      border-color: #dc2626;
+      color: white;
+    }
+    .btn--danger:hover { background: #b91c1c; }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px;
+    }
+    .pagination button {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+    .pagination button:hover { background: var(--bg); }
+    .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .pagination button.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: var(--white);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-header h3 { margin: 0; }
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 768px) {
+      .user-details-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .card-actions {
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+
+  <script src="/js/app.js?v=<%= assetVersion || '' %>"></script>
+  <script>
+    let activeOffset = 0;
+    let historyOffset = 0;
+    const pageSize = 50;
+    let currentUsername = null;
+    let searchTimeout = null;
+
+    // Load summary stats
+    async function loadSummary() {
+      try {
+        const res = await fetch('/admin/api/usage/summary?period=today', { credentials: 'same-origin' });
+        const data = await res.json();
+
+        if (data.ok) {
+          document.getElementById('statActive').textContent = data.summary.active_sessions || 0;
+          document.getElementById('statTodaySessions').textContent = data.summary.unique_users || 0;
+          document.getElementById('statTodayDown').textContent = data.summary.total_download_formatted || '0 B';
+          document.getElementById('statTodayUp').textContent = data.summary.total_upload_formatted || '0 B';
+        }
+      } catch (e) {
+        console.error('Failed to load summary:', e);
+      }
+    }
+
+    // Load active sessions
+    async function loadActiveSessions() {
+      const search = document.getElementById('activeSearch').value;
+      try {
+        const res = await fetch(`/admin/api/usage/active-sessions?limit=${pageSize}&offset=${activeOffset}&search=${encodeURIComponent(search)}`, { credentials: 'same-origin' });
+        const data = await res.json();
+
+        if (data.ok) {
+          renderActiveSessions(data.sessions);
+          renderPagination('activePagination', data.total, activeOffset, (newOffset) => {
+            activeOffset = newOffset;
+            loadActiveSessions();
+          });
+        }
+      } catch (e) {
+        console.error('Failed to load active sessions:', e);
+      }
+    }
+
+    function renderActiveSessions(sessions) {
+      const tbody = document.getElementById('activeSessionsTable');
+
+      if (!sessions.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="muted text-center">No active sessions</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = sessions.map(s => `
+        <tr>
+          <td>
+            <a href="#" onclick="viewUser('${s.username}'); return false;">
+              <code>${s.username}</code>
+            </a>
+          </td>
+          <td>${escapeHtml(s.device_name)}</td>
+          <td><code>${s.client_ip || '-'}</code></td>
+          <td><code style="font-size:0.75rem">${s.mac_address || '-'}</code></td>
+          <td>${s.duration_formatted}</td>
+          <td>${s.download_formatted}</td>
+          <td>${s.upload_formatted}</td>
+          <td><strong>${s.total_formatted}</strong></td>
+          <td>
+            <button class="action-btn" onclick="viewUser('${s.username}')" title="View Details">
+              <i data-lucide="eye"></i>
+            </button>
+            <button class="action-btn action-btn--danger" onclick="disconnectUser('${s.username}')" title="Disconnect">
+              <i data-lucide="wifi-off"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Load top users
+    async function loadTopUsers() {
+      const period = document.getElementById('topUsersPeriod').value;
+      const sort = document.getElementById('topUsersSort').value;
+
+      try {
+        const res = await fetch(`/admin/api/usage/top-users?period=${period}&sort=${sort}&limit=50`, { credentials: 'same-origin' });
+        const data = await res.json();
+
+        if (data.ok) {
+          renderTopUsers(data.users);
+        }
+      } catch (e) {
+        console.error('Failed to load top users:', e);
+      }
+    }
+
+    function renderTopUsers(users) {
+      const tbody = document.getElementById('topUsersTable');
+
+      if (!users.length) {
+        tbody.innerHTML = '<tr><td colspan="10" class="muted text-center">No usage data found</td></tr>';
+        return;
+      }
+
+      // Find max for bar visualization
+      const maxData = Math.max(...users.map(u => u.total_data || 0));
+
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td>
+            <span class="status-dot ${u.is_online ? 'online' : 'offline'}">
+              ${u.is_online ? 'Online' : 'Offline'}
+            </span>
+          </td>
+          <td>
+            <a href="#" onclick="viewUser('${u.username}'); return false;">
+              <code>${u.username}</code>
+            </a>
+          </td>
+          <td>${u.plan_name || '-'}</td>
+          <td>${u.session_count}</td>
+          <td>${u.total_download_formatted}</td>
+          <td>${u.total_upload_formatted}</td>
+          <td>
+            <div class="data-bar">
+              <div class="data-bar-fill" style="width: ${maxData ? (u.total_data / maxData * 100) : 0}px; max-width: 100px;"></div>
+              <strong>${u.total_data_formatted}</strong>
+            </div>
+          </td>
+          <td>${u.total_time_formatted}</td>
+          <td>${u.last_session ? formatDate(u.last_session) : '-'}</td>
+          <td>
+            <button class="action-btn" onclick="viewUser('${u.username}')" title="View Details">
+              <i data-lucide="eye"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Load session history
+    async function loadSessionHistory() {
+      const search = document.getElementById('historySearch').value;
+      const dateFrom = document.getElementById('historyDateFrom').value;
+      const dateTo = document.getElementById('historyDateTo').value;
+
+      let url = `/admin/api/usage/history?limit=${pageSize}&offset=${historyOffset}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      if (dateFrom) url += `&date_from=${dateFrom}`;
+      if (dateTo) url += `&date_to=${dateTo}`;
+
+      try {
+        const res = await fetch(url, { credentials: 'same-origin' });
+        const data = await res.json();
+
+        if (data.ok) {
+          renderSessionHistory(data.sessions);
+          renderPagination('historyPagination', data.total, historyOffset, (newOffset) => {
+            historyOffset = newOffset;
+            loadSessionHistory();
+          });
+        }
+      } catch (e) {
+        console.error('Failed to load session history:', e);
+      }
+    }
+
+    function renderSessionHistory(sessions) {
+      const tbody = document.getElementById('historyTable');
+
+      if (!sessions.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="muted text-center">No session history found</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = sessions.map(s => `
+        <tr>
+          <td>
+            <a href="#" onclick="viewUser('${s.username}'); return false;">
+              <code>${s.username}</code>
+            </a>
+          </td>
+          <td>${formatDateTime(s.acctstarttime)}</td>
+          <td>${formatDateTime(s.acctstoptime)}</td>
+          <td>${s.duration_formatted}</td>
+          <td>${s.download_formatted}</td>
+          <td>${s.upload_formatted}</td>
+          <td><code>${s.client_ip || '-'}</code></td>
+          <td><span class="badge">${s.acctterminatecause || '-'}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // View user details
+    async function viewUser(username) {
+      currentUsername = username;
+      document.getElementById('userModalTitle').textContent = `User: ${username}`;
+      document.getElementById('userModalBody').innerHTML = '<div class="muted text-center">Loading...</div>';
+      document.getElementById('userModal').classList.add('active');
+      document.getElementById('disconnectBtn').style.display = 'none';
+
+      try {
+        const res = await fetch(`/admin/api/usage/user/${username}`, { credentials: 'same-origin' });
+        const data = await res.json();
+
+        if (data.ok) {
+          renderUserDetails(data);
+          if (data.stats.is_online) {
+            document.getElementById('disconnectBtn').style.display = 'inline-flex';
+          }
+        }
+      } catch (e) {
+        document.getElementById('userModalBody').innerHTML = '<div class="text-center" style="color:#dc2626;">Failed to load user details</div>';
+      }
+    }
+
+    function renderUserDetails(data) {
+      const { stats, voucherInfo, recentSessions, dailyUsage, devices, macs } = data;
+
+      let html = `
+        <div class="user-details-grid">
+          <div class="detail-card">
+            <div class="detail-label">Status</div>
+            <div class="detail-value" style="color: ${stats.is_online ? '#22c55e' : '#6b7280'}">
+              ${stats.is_online ? 'Online' : 'Offline'}
+            </div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-label">Total Sessions</div>
+            <div class="detail-value">${stats.total_sessions}</div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-label">Total Download</div>
+            <div class="detail-value">${stats.total_download_formatted}</div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-label">Total Upload</div>
+            <div class="detail-value">${stats.total_upload_formatted}</div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-label">Total Data</div>
+            <div class="detail-value">${stats.total_data_formatted}</div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-label">Total Time Online</div>
+            <div class="detail-value">${stats.total_time_formatted}</div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-label">Avg Session</div>
+            <div class="detail-value">${stats.avg_session_time_formatted}</div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-label">Active Sessions</div>
+            <div class="detail-value">${stats.active_sessions}</div>
+          </div>
+        </div>
+      `;
+
+      if (voucherInfo) {
+        html += `
+          <h4 style="margin-bottom: 12px;">Voucher/Plan Info</h4>
+          <div style="background: var(--bg); padding: 12px; border-radius: var(--radius-sm); margin-bottom: 20px;">
+            <strong>Plan:</strong> ${voucherInfo.plan_name || '-'}<br>
+            <strong>Status:</strong> ${voucherInfo.status || '-'}<br>
+            <strong>Source:</strong> ${voucherInfo.source}<br>
+            ${voucherInfo.data_mb ? `<strong>Data Limit:</strong> ${voucherInfo.data_mb} MB<br>` : ''}
+            ${voucherInfo.speed_down_kbps ? `<strong>Speed:</strong> ${voucherInfo.speed_down_kbps}/${voucherInfo.speed_up_kbps} kbps<br>` : ''}
+          </div>
+        `;
+      }
+
+      if (dailyUsage && dailyUsage.length > 0) {
+        html += `
+          <h4 style="margin-bottom: 12px;">Daily Usage (Last 7 Days)</h4>
+          <table class="table sessions-mini-table" style="margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Sessions</th>
+                <th>Download</th>
+                <th>Upload</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${dailyUsage.map(d => `
+                <tr>
+                  <td>${d.date}</td>
+                  <td>${d.sessions}</td>
+                  <td>${d.download_formatted}</td>
+                  <td>${d.upload_formatted}</td>
+                  <td>${d.time_formatted}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      if (recentSessions && recentSessions.length > 0) {
+        html += `
+          <h4 style="margin-bottom: 12px;">Recent Sessions</h4>
+          <table class="table sessions-mini-table">
+            <thead>
+              <tr>
+                <th>Start</th>
+                <th>Duration</th>
+                <th>Down</th>
+                <th>Up</th>
+                <th>IP</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${recentSessions.slice(0, 10).map(s => `
+                <tr>
+                  <td>${formatDateTime(s.acctstarttime)}</td>
+                  <td>${s.duration_formatted}</td>
+                  <td>${s.download_formatted}</td>
+                  <td>${s.upload_formatted}</td>
+                  <td><code>${s.client_ip || '-'}</code></td>
+                  <td>
+                    <span class="status-dot ${s.is_active ? 'online' : 'offline'}">
+                      ${s.is_active ? 'Active' : (s.acctterminatecause || 'Ended')}
+                    </span>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      if (macs && macs.length > 0) {
+        html += `
+          <h4 style="margin: 20px 0 12px;">Devices Used (${macs.length})</h4>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            ${macs.map(m => `<code style="font-size: 0.75rem; padding: 4px 8px; background: var(--bg); border-radius: 4px;">${m.mac} (${m.session_count})</code>`).join('')}
+          </div>
+        `;
+      }
+
+      document.getElementById('userModalBody').innerHTML = html;
+    }
+
+    function closeUserModal() {
+      document.getElementById('userModal').classList.remove('active');
+      currentUsername = null;
+    }
+
+    // Disconnect user
+    async function disconnectUser(username) {
+      if (!confirm(`Are you sure you want to disconnect user "${username}"?`)) return;
+
+      try {
+        const res = await fetch(`/admin/api/usage/disconnect/${username}`, {
+          method: 'POST',
+          credentials: 'same-origin'
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+          alert(data.message);
+          loadActiveSessions();
+          loadSummary();
+        } else {
+          alert('Failed: ' + data.message);
+        }
+      } catch (e) {
+        alert('Error disconnecting user');
+      }
+    }
+
+    function disconnectCurrentUser() {
+      if (currentUsername) {
+        disconnectUser(currentUsername);
+        closeUserModal();
+      }
+    }
+
+    // Export usage data
+    function exportUsage(type) {
+      const period = document.getElementById('topUsersPeriod')?.value || 'month';
+      window.location.href = `/admin/api/usage/export?type=${type}&period=${period}`;
+    }
+
+    // Switch tabs
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      event.target.classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
+
+      if (tabId === 'active') loadActiveSessions();
+      else if (tabId === 'top-users') loadTopUsers();
+      else if (tabId === 'history') loadSessionHistory();
+    }
+
+    // Pagination
+    function renderPagination(containerId, total, currentOffset, onPageChange) {
+      const container = document.getElementById(containerId);
+      const totalPages = Math.ceil(total / pageSize);
+      const currentPage = Math.floor(currentOffset / pageSize) + 1;
+
+      if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+      }
+
+      let html = '';
+      html += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="arguments[0].stopPropagation()">Prev</button>`;
+
+      for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+        html += `<button class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+      }
+
+      html += `<button ${currentPage === totalPages ? 'disabled' : ''}>Next</button>`;
+      container.innerHTML = html;
+
+      container.querySelectorAll('button').forEach((btn, idx) => {
+        btn.onclick = () => {
+          if (btn.disabled) return;
+          if (idx === 0) onPageChange(Math.max(0, currentOffset - pageSize));
+          else if (idx === container.querySelectorAll('button').length - 1) onPageChange(currentOffset + pageSize);
+          else onPageChange((idx - 1) * pageSize);
+        };
+      });
+    }
+
+    // Debounce search
+    function debounceActiveSearch() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        activeOffset = 0;
+        loadActiveSessions();
+      }, 300);
+    }
+
+    function debounceHistorySearch() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        historyOffset = 0;
+        loadSessionHistory();
+      }, 300);
+    }
+
+    // Utility functions
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text || '';
+      return div.innerHTML;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      return new Date(dateStr).toLocaleDateString();
+    }
+
+    function formatDateTime(dateStr) {
+      if (!dateStr) return '-';
+      return new Date(dateStr).toLocaleString();
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSummary();
+      loadActiveSessions();
+
+      // Auto-refresh every 30 seconds
+      setInterval(() => {
+        loadSummary();
+        if (document.getElementById('tab-active').classList.contains('active')) {
+          loadActiveSessions();
+        }
+      }, 30000);
+    });
+  </script>
+</body>
+</html>

@@ -45,6 +45,11 @@
       Finance
     </a>
 
+    <a class="nav__item <%= cur==='sessions'?'is-active':'' %>" href="/admin/sessions">
+      <i data-lucide="activity"></i>
+      Sessions
+    </a>
+
     <% if (typeof admin !== 'undefined' && admin.role === 'SUPER_ADMIN') { %>
     <a class="nav__item <%= cur==='users'?'is-active':'' %>" href="/admin/users">
       <i data-lucide="users"></i>
