@@ -166,7 +166,19 @@ router.get("/finance", requireAdmin, async (req, res) => {
   res.render("admin/finance", { admin: req.session.admin, assetVersion: ASSET_VERSION });
 });
 
-// Documentation page
+// System Documentation page (software documentation)
+router.get("/system-docs", requireAdmin, async (req, res) => {
+  const env = require("../config/env");
+  const baseUrl = env.BASE_URL || "https://bula.prosystemsug.com";
+
+  res.render("admin/system-docs", {
+    admin: req.session.admin,
+    assetVersion: ASSET_VERSION,
+    baseUrl
+  });
+});
+
+// Configuration Guides page (MikroTik setup)
 router.get("/docs", requireAdmin, async (req, res) => {
   const env = require("../config/env");
   const baseUrl = env.BASE_URL || "https://bula.prosystemsug.com";

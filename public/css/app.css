@@ -104,6 +104,21 @@ a:hover { text-decoration: underline; }
 
 .nav__item svg { width: 20px; height: 20px; flex-shrink: 0; }
 
+.nav__divider {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 0;
+}
+
+.nav__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 8px 14px 4px;
+}
+
 /* ===== Main Content ===== */
 .main {
   flex: 1;

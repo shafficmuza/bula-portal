@@ -54,10 +54,19 @@
 
     <div class="nav__divider"></div>
 
+    <div class="nav__label">Documentation</div>
+
+    <a class="nav__item <%= cur==='system-docs'?'is-active':'' %>" href="/admin/system-docs">
+      <i data-lucide="file-text"></i>
+      System Docs
+    </a>
+
     <a class="nav__item <%= cur==='docs'?'is-active':'' %>" href="/admin/docs">
       <i data-lucide="book-open"></i>
-      Setup Guide
+      Config Guides
     </a>
+
+    <div class="nav__divider"></div>
 
     <a class="nav__item <%= cur==='profile'?'is-active':'' %>" href="/admin/profile">
       <i data-lucide="user-cog"></i>

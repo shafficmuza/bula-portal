@@ -1,0 +1,896 @@
+<%- include("../partials/head", { title: "System Documentation", assetVersion }) %>
+
+<body>
+  <div class="app">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <%- include("../partials/sidebar", { activeMenu: "system-docs" }) %>
+
+    <div class="main">
+      <%- include("../partials/topbar", { admin }) %>
+
+      <div class="content">
+        <div class="page-title">
+          <h2>Bula WiFi Portal - System Documentation</h2>
+          <div class="muted">Complete technical documentation for all system features</div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="docs-tabs">
+          <button class="docs-tab active" onclick="showSection('overview')">Overview</button>
+          <button class="docs-tab" onclick="showSection('vouchers')">Vouchers</button>
+          <button class="docs-tab" onclick="showSection('security')">Security</button>
+          <button class="docs-tab" onclick="showSection('payments')">Payments</button>
+          <button class="docs-tab" onclick="showSection('devices')">Devices</button>
+          <button class="docs-tab" onclick="showSection('radius')">RADIUS</button>
+          <button class="docs-tab" onclick="showSection('api')">API Reference</button>
+        </div>
+
+        <!-- Overview Section -->
+        <div class="docs-section active" id="section-overview">
+          <div class="card">
+            <div class="card-head">
+              <h3>System Overview</h3>
+            </div>
+            <div class="card-body docs-content">
+              <p>The Bula WiFi Portal is a comprehensive hotspot management system that provides:</p>
+              <ul>
+                <li><strong>Voucher-based WiFi Access:</strong> Generate and sell WiFi access vouchers</li>
+                <li><strong>Payment Integration:</strong> Accept payments via Yo Payments (Mobile Money) and Flutterwave</li>
+                <li><strong>RADIUS Authentication:</strong> FreeRADIUS integration for user authentication</li>
+                <li><strong>Multi-vendor Device Support:</strong> MikroTik, Ubiquiti, and Cisco devices</li>
+                <li><strong>Security Features:</strong> Rate limiting, IP blocking, fraud detection</li>
+                <li><strong>Admin Dashboard:</strong> Complete management interface</li>
+              </ul>
+
+              <h4>Architecture</h4>
+              <div class="docs-diagram">
+                <pre>
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Client    │────>│   MikroTik   │────>│  FreeRADIUS │
+│   Device    │     │   Hotspot    │     │   Server    │
+└─────────────┘     └──────────────┘     └──────┬──────┘
+                           │                     │
+                           v                     v
+                    ┌──────────────┐     ┌─────────────┐
+                    │  Bula WiFi   │<───>│   MySQL DB  │
+                    │   Portal     │     │  (portal +  │
+                    │  (Node.js)   │     │   radius)   │
+                    └──────┬───────┘     └─────────────┘
+                           │
+              ┌────────────┼────────────┐
+              v            v            v
+        ┌──────────┐ ┌──────────┐ ┌──────────┐
+        │    Yo    │ │ Flutter- │ │ MikroTik │
+        │ Payments │ │   wave   │ │   API    │
+        └──────────┘ └──────────┘ └──────────┘
+                </pre>
+              </div>
+
+              <h4>Key Components</h4>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Component</th>
+                    <th>Technology</th>
+                    <th>Purpose</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Web Server</td>
+                    <td>Node.js / Express</td>
+                    <td>Portal and Admin API</td>
+                  </tr>
+                  <tr>
+                    <td>Database</td>
+                    <td>MySQL</td>
+                    <td>Portal data + RADIUS data</td>
+                  </tr>
+                  <tr>
+                    <td>Authentication</td>
+                    <td>FreeRADIUS</td>
+                    <td>WiFi user authentication</td>
+                  </tr>
+                  <tr>
+                    <td>Hotspot</td>
+                    <td>MikroTik/Ubiquiti/Cisco</td>
+                    <td>Network access control</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vouchers Section -->
+        <div class="docs-section" id="section-vouchers">
+          <div class="card">
+            <div class="card-head">
+              <h3>Voucher System</h3>
+            </div>
+            <div class="card-body docs-content">
+              <h4>Voucher Lifecycle</h4>
+              <div class="docs-diagram">
+                <pre>
+┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+│ CREATED  │───>│  ACTIVE  │───>│   USED   │    │ DISABLED │
+│          │    │          │    │          │    │          │
+└──────────┘    └────┬─────┘    └──────────┘    └──────────┘
+                     │                               ^
+                     └───────────────────────────────┘
+                           (Admin can disable)
+                </pre>
+              </div>
+
+              <h4>Voucher Sources</h4>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Source</th>
+                    <th>Table</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Admin Generated</td>
+                    <td><code>vouchers</code></td>
+                    <td>Manually generated by admin for resale</td>
+                  </tr>
+                  <tr>
+                    <td>Payment Generated</td>
+                    <td><code>orders</code></td>
+                    <td>Auto-generated when customer pays</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <h4>Voucher Format</h4>
+              <ul>
+                <li><strong>Code:</strong> 5-digit numeric (10000-99999)</li>
+                <li><strong>Username:</strong> Same as code</li>
+                <li><strong>Password:</strong> Same as code</li>
+              </ul>
+
+              <h4>One-Time Use Enforcement</h4>
+              <p>Vouchers can only be used once. The system enforces this through:</p>
+              <ol>
+                <li><strong>voucher_usage table:</strong> Records when/where voucher was used</li>
+                <li><strong>RADIUS accounting:</strong> Checks for existing sessions</li>
+                <li><strong>Status updates:</strong> Marks voucher as USED after login</li>
+              </ol>
+
+              <div class="docs-code-block">
+                <strong>Validation Flow:</strong>
+                <pre>
+1. User enters voucher code
+2. System checks rate limits
+3. System looks up voucher (vouchers table OR orders table)
+4. Validates: status, expiration, not already used
+5. Checks RADIUS for existing sessions
+6. If valid, returns voucher details
+7. After RADIUS auth succeeds, marks as USED
+                </pre>
+              </div>
+
+              <h4>Admin Operations</h4>
+              <ul>
+                <li><strong>Generate:</strong> Bulk create vouchers for a plan</li>
+                <li><strong>Export:</strong> Download CSV for printing</li>
+                <li><strong>Disable:</strong> Prevent voucher from being used</li>
+                <li><strong>Delete:</strong> Remove unused vouchers</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Section -->
+        <div class="docs-section" id="section-security">
+          <div class="card">
+            <div class="card-head">
+              <h3>Security System</h3>
+            </div>
+            <div class="card-body docs-content">
+              <h4>Rate Limiting</h4>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Parameter</th>
+                    <th>Value</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Window</td>
+                    <td>60 seconds</td>
+                    <td>Time window for counting attempts</td>
+                  </tr>
+                  <tr>
+                    <td>Max Attempts</td>
+                    <td>10 per window</td>
+                    <td>Maximum validation attempts per minute</td>
+                  </tr>
+                  <tr>
+                    <td>Lockout Threshold</td>
+                    <td>30 attempts in 5 min</td>
+                    <td>Triggers IP lockout</td>
+                  </tr>
+                  <tr>
+                    <td>Lockout Duration</td>
+                    <td>15 minutes</td>
+                    <td>How long IP is blocked</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <h4>Security Tables</h4>
+              <div class="docs-code-block">
+                <strong>voucher_security_logs</strong>
+                <pre>
+- event_type: validation_attempt, validation_success, validation_failed,
+              voucher_used, suspicious_activity, rate_limit_exceeded,
+              ip_locked, multiple_use_attempt
+- voucher_code: The voucher being validated
+- ip_address: Client IP
+- severity: info, warning, critical
+- details: JSON with additional context
+                </pre>
+              </div>
+
+              <div class="docs-code-block">
+                <strong>voucher_usage</strong>
+                <pre>
+- voucher_code: Unique, tracks one-time use
+- voucher_source: 'vouchers' or 'orders'
+- used_at: Timestamp
+- used_by_ip: Client IP
+- used_by_mac: Client MAC address
+                </pre>
+              </div>
+
+              <div class="docs-code-block">
+                <strong>flagged_ips</strong>
+                <pre>
+- ip_address: Blocked IP
+- reason: Why it was blocked
+- failed_attempts: Counter
+- blocked_until: When block expires
+- is_permanent: For permanent bans
+                </pre>
+              </div>
+
+              <h4>Suspicious Activity Detection</h4>
+              <p>The system flags the following as suspicious:</p>
+              <ul>
+                <li>Multiple failed validation attempts (5+ from same IP)</li>
+                <li>Attempts to reuse already-used vouchers</li>
+                <li>Rapid-fire validation requests</li>
+                <li>Sequential voucher code attempts (brute force)</li>
+              </ul>
+
+              <h4>Admin Security Dashboard</h4>
+              <p>Access via: <a href="/admin/vouchers">Vouchers</a> > Security tab (coming soon)</p>
+              <p>API endpoints available:</p>
+              <ul>
+                <li><code>GET /admin/api/vouchers/security/suspicious</code> - View suspicious activity</li>
+                <li><code>GET /admin/api/vouchers/security/logs</code> - View security logs</li>
+                <li><code>GET /admin/api/vouchers/security/blocked-ips</code> - View blocked IPs</li>
+                <li><code>DELETE /admin/api/vouchers/security/blocked-ips/:ip</code> - Unblock IP</li>
+                <li><code>POST /admin/api/vouchers/security/block-ip</code> - Manually block IP</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payments Section -->
+        <div class="docs-section" id="section-payments">
+          <div class="card">
+            <div class="card-head">
+              <h3>Payment Integration</h3>
+            </div>
+            <div class="card-body docs-content">
+              <h4>Supported Providers</h4>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Provider</th>
+                    <th>Code</th>
+                    <th>Methods</th>
+                    <th>Region</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Yo Payments</td>
+                    <td><code>YO</code></td>
+                    <td>MTN Mobile Money, Airtel Money</td>
+                    <td>Uganda</td>
+                  </tr>
+                  <tr>
+                    <td>Flutterwave</td>
+                    <td><code>FLUTTERWAVE</code></td>
+                    <td>Cards, Mobile Money, Bank</td>
+                    <td>Africa-wide</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <h4>Payment Flow</h4>
+              <div class="docs-diagram">
+                <pre>
+┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+│ Customer │───>│  Portal  │───>│ Payment  │───>│   IPN    │
+│ Selects  │    │ Creates  │    │ Provider │    │ Webhook  │
+│   Plan   │    │  Order   │    │   API    │    │ Callback │
+└──────────┘    └──────────┘    └──────────┘    └────┬─────┘
+                                                     │
+     ┌───────────────────────────────────────────────┘
+     v
+┌──────────┐    ┌──────────┐    ┌──────────┐
+│  Update  │───>│ Activate │───>│  Return  │
+│  Order   │    │  RADIUS  │    │ Voucher  │
+│   PAID   │    │  User    │    │   Code   │
+└──────────┘    └──────────┘    └──────────┘
+                </pre>
+              </div>
+
+              <h4>Yo Payments Configuration</h4>
+              <table class="table">
+                <tr>
+                  <td><strong>API Username</strong></td>
+                  <td>Your Yo Payments API username</td>
+                </tr>
+                <tr>
+                  <td><strong>API Password</strong></td>
+                  <td>Your Yo Payments API password</td>
+                </tr>
+                <tr>
+                  <td><strong>IPN URL</strong></td>
+                  <td><code><%= typeof baseUrl !== 'undefined' ? baseUrl : 'https://your-domain.com' %>/api/yopayments/ipn</code></td>
+                </tr>
+                <tr>
+                  <td><strong>Environment</strong></td>
+                  <td>test (sandbox) or live (production)</td>
+                </tr>
+              </table>
+
+              <h4>Flutterwave Configuration</h4>
+              <table class="table">
+                <tr>
+                  <td><strong>Public Key</strong></td>
+                  <td>Your Flutterwave public key</td>
+                </tr>
+                <tr>
+                  <td><strong>Secret Key</strong></td>
+                  <td>Your Flutterwave secret key</td>
+                </tr>
+                <tr>
+                  <td><strong>Webhook URL</strong></td>
+                  <td><code><%= typeof baseUrl !== 'undefined' ? baseUrl : 'https://your-domain.com' %>/api/flutterwave/webhook</code></td>
+                </tr>
+                <tr>
+                  <td><strong>Redirect URL</strong></td>
+                  <td><code><%= typeof baseUrl !== 'undefined' ? baseUrl : 'https://your-domain.com' %>/payment-complete</code></td>
+                </tr>
+              </table>
+
+              <h4>Transaction Narrative</h4>
+              <p>Payment narrative format: <code>{BusinessFirstWord} WiFi {PlanName}@{Price}</code></p>
+              <p>Example: <code>Buula's WiFi 4 Hours@5000</code></p>
+
+              <h4>MAC Auto-Login</h4>
+              <p>After payment, the system can automatically authorize the customer's device:</p>
+              <ol>
+                <li>Customer's MAC address is captured during payment</li>
+                <li>After payment success, system calls MikroTik API</li>
+                <li>Creates IP binding or hotspot host entry</li>
+                <li>Customer is automatically connected without entering voucher</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <!-- Devices Section -->
+        <div class="docs-section" id="section-devices">
+          <div class="card">
+            <div class="card-head">
+              <h3>Device Management</h3>
+            </div>
+            <div class="card-body docs-content">
+              <h4>Supported Vendors</h4>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Vendor</th>
+                    <th>Models</th>
+                    <th>Config Method</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>MikroTik</td>
+                    <td>All RouterOS devices</td>
+                    <td>WinBox/CLI + API</td>
+                  </tr>
+                  <tr>
+                    <td>Ubiquiti</td>
+                    <td>UniFi, EdgeMAX, airMAX</td>
+                    <td>UniFi Controller / CLI</td>
+                  </tr>
+                  <tr>
+                    <td>Cisco</td>
+                    <td>Aironet, Catalyst, Meraki, WLC, ASA</td>
+                    <td>IOS CLI / Dashboard</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <h4>Device Registration</h4>
+              <p>When you add a device:</p>
+              <ol>
+                <li>Device info is stored in <code>devices</code> table</li>
+                <li>RADIUS NAS entry is created in <code>nas</code> table</li>
+                <li>Device can now authenticate users via RADIUS</li>
+              </ol>
+
+              <h4>Required Device Configuration</h4>
+              <ul>
+                <li><strong>RADIUS Server:</strong> Point to this server's IP</li>
+                <li><strong>Auth Port:</strong> 1812 (UDP)</li>
+                <li><strong>Acct Port:</strong> 1813 (UDP)</li>
+                <li><strong>Secret:</strong> Must match the secret in portal</li>
+                <li><strong>Walled Garden:</strong> Allow portal domain before auth</li>
+              </ul>
+
+              <h4>MikroTik Setup</h4>
+              <p>See: <a href="/admin/docs">MikroTik Setup Guide</a></p>
+
+              <h4>Ubiquiti Setup</h4>
+              <p>In Device Management, select Ubiquiti vendor and use "Configuration Guide" button.</p>
+
+              <h4>Cisco Setup</h4>
+              <p>In Device Management, select Cisco vendor and use "Configuration Guide" button.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- RADIUS Section -->
+        <div class="docs-section" id="section-radius">
+          <div class="card">
+            <div class="card-head">
+              <h3>RADIUS Authentication</h3>
+            </div>
+            <div class="card-body docs-content">
+              <h4>FreeRADIUS Tables</h4>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Table</th>
+                    <th>Purpose</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>radcheck</code></td>
+                    <td>User authentication (passwords)</td>
+                  </tr>
+                  <tr>
+                    <td><code>radreply</code></td>
+                    <td>User attributes (speed, session time, data limit)</td>
+                  </tr>
+                  <tr>
+                    <td><code>radacct</code></td>
+                    <td>Accounting records (sessions, usage)</td>
+                  </tr>
+                  <tr>
+                    <td><code>nas</code></td>
+                    <td>Network Access Servers (routers)</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <h4>Voucher Attributes</h4>
+              <p>When a voucher is activated, these RADIUS attributes are set:</p>
+
+              <div class="docs-code-block">
+                <strong>radcheck (Authentication)</strong>
+                <pre>
+Cleartext-Password := "12345"
+                </pre>
+              </div>
+
+              <div class="docs-code-block">
+                <strong>radreply (Session Attributes)</strong>
+                <pre>
+Expiration := "31 Jan 2026 15:30:00"
+Session-Timeout := 3600
+Idle-Timeout := 300
+Mikrotik-Rate-Limit := "2048k/1024k"
+WISPr-Bandwidth-Max-Down := 2048000
+WISPr-Bandwidth-Max-Up := 1024000
+Mikrotik-Total-Limit := 1073741824  (1GB in bytes)
+                </pre>
+              </div>
+
+              <h4>Speed Limiting</h4>
+              <p>Speed limits are applied via:</p>
+              <ul>
+                <li><code>Mikrotik-Rate-Limit</code>: For MikroTik devices (format: down/up in kbps)</li>
+                <li><code>WISPr-Bandwidth-Max-Down/Up</code>: Standard RADIUS (in bps)</li>
+              </ul>
+
+              <h4>Data Caps</h4>
+              <p>Data limits use <code>Mikrotik-Total-Limit</code> attribute (bytes).</p>
+
+              <h4>Session Management</h4>
+              <ul>
+                <li><strong>Session-Timeout:</strong> Maximum session duration</li>
+                <li><strong>Idle-Timeout:</strong> Disconnect after inactivity (default: 5 min)</li>
+                <li><strong>Expiration:</strong> Absolute expiry time</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- API Reference Section -->
+        <div class="docs-section" id="section-api">
+          <div class="card">
+            <div class="card-head">
+              <h3>API Reference</h3>
+            </div>
+            <div class="card-body docs-content">
+              <h4>Portal API (Public)</h4>
+              <table class="table api-table">
+                <thead>
+                  <tr>
+                    <th>Method</th>
+                    <th>Endpoint</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="method get">GET</span></td>
+                    <td><code>/api/portal/plans</code></td>
+                    <td>Get available WiFi plans</td>
+                  </tr>
+                  <tr>
+                    <td><span class="method get">GET</span></td>
+                    <td><code>/api/portal/payment-providers</code></td>
+                    <td>Get enabled payment providers</td>
+                  </tr>
+                  <tr>
+                    <td><span class="method post">POST</span></td>
+                    <td><code>/api/portal/voucher/validate</code></td>
+                    <td>Validate a voucher code</td>
+                  </tr>
+                  <tr>
+                    <td><span class="method post">POST</span></td>
+                    <td><code>/api/portal/voucher/use</code></td>
+                    <td>Mark voucher as used</td>
+                  </tr>
+                  <tr>
+                    <td><span class="method get">GET</span></td>
+                    <td><code>/api/portal/voucher/status/:code</code></td>
+                    <td>Check voucher status</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <h4>Voucher Validation Request</h4>
+              <div class="docs-code-block">
+                <pre>
+POST /api/portal/voucher/validate
+Content-Type: application/json
+
+{
+  "code": "12345"
+}
+                </pre>
+              </div>
+
+              <h4>Voucher Validation Response (Success)</h4>
+              <div class="docs-code-block">
+                <pre>
+{
+  "ok": true,
+  "message": "Voucher is valid",
+  "voucher": {
+    "code": "12345",
+    "plan_name": "1 Hour",
+    "plan_id": 1,
+    "duration_minutes": 60,
+    "speed_down_kbps": 2048,
+    "speed_up_kbps": 1024
+  }
+}
+                </pre>
+              </div>
+
+              <h4>Voucher Validation Response (Error)</h4>
+              <div class="docs-code-block">
+                <pre>
+// Already used
+{ "ok": false, "message": "This voucher has already been used", "alreadyUsed": true }
+
+// Rate limited
+{ "ok": false, "message": "Rate limit exceeded. Try again in 45 seconds.", "rateLimited": true }
+
+// IP blocked
+{ "ok": false, "message": "Access denied. Please contact support.", "blocked": true }
+                </pre>
+              </div>
+
+              <h4>Admin API (Requires Authentication)</h4>
+              <p>All admin endpoints require session authentication.</p>
+
+              <table class="table api-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Endpoints</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Vouchers</td>
+                    <td>
+                      <code>GET /admin/api/vouchers</code><br>
+                      <code>POST /admin/api/vouchers/generate</code><br>
+                      <code>PATCH /admin/api/vouchers/:id</code><br>
+                      <code>DELETE /admin/api/vouchers/:id</code>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Security</td>
+                    <td>
+                      <code>GET /admin/api/vouchers/security/suspicious</code><br>
+                      <code>GET /admin/api/vouchers/security/logs</code><br>
+                      <code>GET /admin/api/vouchers/security/blocked-ips</code><br>
+                      <code>POST /admin/api/vouchers/security/block-ip</code>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Plans</td>
+                    <td>
+                      <code>GET /admin/api/plans</code><br>
+                      <code>POST /admin/api/plans</code><br>
+                      <code>PUT /admin/api/plans/:id</code>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Devices</td>
+                    <td>
+                      <code>GET /admin/api/devices</code><br>
+                      <code>POST /admin/api/devices</code><br>
+                      <code>GET /admin/api/devices/:id/stats</code>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Finance</td>
+                    <td>
+                      <code>GET /admin/api/finance/summary</code><br>
+                      <code>GET /admin/api/finance/payments</code><br>
+                      <code>GET /admin/api/finance/withdrawals</code>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Version History -->
+        <div class="card mt-16">
+          <div class="card-head">
+            <h3>Version History</h3>
+          </div>
+          <div class="card-body docs-content">
+            <div class="version-entry">
+              <strong>v1.5.0</strong> - <span class="muted">January 2026</span>
+              <ul>
+                <li>Added comprehensive voucher security system</li>
+                <li>Implemented one-time voucher use enforcement</li>
+                <li>Added rate limiting and IP blocking</li>
+                <li>Added suspicious activity detection and logging</li>
+                <li>Added security admin API endpoints</li>
+              </ul>
+            </div>
+            <div class="version-entry">
+              <strong>v1.4.0</strong> - <span class="muted">January 2026</span>
+              <ul>
+                <li>Added comprehensive Cisco device support</li>
+                <li>Added Ubiquiti device support with all models</li>
+                <li>Added device configuration guides</li>
+              </ul>
+            </div>
+            <div class="version-entry">
+              <strong>v1.3.0</strong> - <span class="muted">January 2026</span>
+              <ul>
+                <li>Improved Yo Payments integration</li>
+                <li>Dynamic payment provider selection</li>
+                <li>Fixed transaction narrative formatting</li>
+                <li>Added MAC auto-login after payment</li>
+              </ul>
+            </div>
+            <div class="version-entry">
+              <strong>v1.2.0</strong> - <span class="muted">January 2026</span>
+              <ul>
+                <li>Added MikroTik API integration</li>
+                <li>Implemented MAC binding for auto-login</li>
+                <li>Added device management UI</li>
+              </ul>
+            </div>
+            <div class="version-entry">
+              <strong>v1.0.0</strong> - <span class="muted">Initial Release</span>
+              <ul>
+                <li>Basic voucher management</li>
+                <li>Flutterwave payment integration</li>
+                <li>FreeRADIUS authentication</li>
+                <li>Admin dashboard</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .docs-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .docs-tab {
+      padding: 10px 20px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .docs-tab:hover {
+      background: var(--bg);
+    }
+    .docs-tab.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .docs-section {
+      display: none;
+    }
+    .docs-section.active {
+      display: block;
+    }
+    .docs-content {
+      line-height: 1.7;
+    }
+    .docs-content h4 {
+      margin-top: 24px;
+      margin-bottom: 12px;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    .docs-content p {
+      margin-bottom: 16px;
+    }
+    .docs-content ul, .docs-content ol {
+      margin-bottom: 16px;
+      padding-left: 24px;
+    }
+    .docs-content li {
+      margin: 8px 0;
+    }
+    .docs-diagram {
+      background: #1e293b;
+      color: #94a3b8;
+      padding: 20px;
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+      margin: 16px 0;
+    }
+    .docs-diagram pre {
+      margin: 0;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.8125rem;
+      line-height: 1.5;
+    }
+    .docs-code-block {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin: 16px 0;
+      overflow: hidden;
+    }
+    .docs-code-block strong {
+      display: block;
+      padding: 10px 16px;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    .docs-code-block pre {
+      margin: 0;
+      padding: 16px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.8125rem;
+      overflow-x: auto;
+      background: #1e293b;
+      color: #e2e8f0;
+    }
+    code {
+      background: var(--bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.875rem;
+    }
+    .table {
+      width: 100%;
+      margin: 16px 0;
+    }
+    .api-table code {
+      font-size: 0.75rem;
+    }
+    .method {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .method.get {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .method.post {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .method.put {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .method.delete {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .version-entry {
+      padding: 16px;
+      border-left: 3px solid var(--primary);
+      background: var(--bg);
+      margin-bottom: 16px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+    .version-entry ul {
+      margin: 8px 0 0 0;
+      padding-left: 20px;
+    }
+    .version-entry li {
+      margin: 4px 0;
+      font-size: 0.875rem;
+    }
+  </style>
+
+  <script src="/js/app.js?v=<%= assetVersion || '' %>"></script>
+  <script>
+    function showSection(sectionId) {
+      // Hide all sections
+      document.querySelectorAll('.docs-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.docs-tab').forEach(t => t.classList.remove('active'));
+
+      // Show selected section
+      document.getElementById('section-' + sectionId).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
