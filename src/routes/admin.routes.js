@@ -12,6 +12,7 @@ const paymentProviderService = require("../services/payment-provider.service");
 const mikrotikService = require("../services/mikrotik.service");
 const ubiquitiService = require("../services/ubiquiti.service");
 const ciscoService = require("../services/cisco.service");
+const voucherSecurity = require("../services/voucher-security.service");
 
 const router = express.Router();
 const ASSET_VERSION = Date.now();
@@ -1452,6 +1453,213 @@ router.get("/api/vouchers/export/csv", requireAdmin, async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=vouchers-${Date.now()}.csv`);
     res.send(csv);
   } catch (e) {
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// ============ VOUCHER SECURITY API ENDPOINTS ============
+
+// Get suspicious activity report
+router.get("/api/vouchers/security/suspicious", requireAdmin, async (req, res) => {
+  try {
+    const hours = parseInt(req.query.hours) || 24;
+    const report = await voucherSecurity.getSuspiciousActivity(hours);
+    res.json({ ok: true, report });
+  } catch (e) {
+    console.error("Get suspicious activity error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get security logs with pagination
+router.get("/api/vouchers/security/logs", requireAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const offset = (page - 1) * limit;
+    const severity = req.query.severity || null;
+    const eventType = req.query.event_type || null;
+
+    let whereClause = "WHERE 1=1";
+    const params = [];
+
+    if (severity) {
+      whereClause += " AND severity = ?";
+      params.push(severity);
+    }
+    if (eventType) {
+      whereClause += " AND event_type = ?";
+      params.push(eventType);
+    }
+
+    const [[countResult]] = await portalDB.query(
+      `SELECT COUNT(*) as total FROM voucher_security_logs ${whereClause}`,
+      params
+    );
+
+    const [logs] = await portalDB.query(
+      `SELECT * FROM voucher_security_logs ${whereClause}
+       ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    // Parse JSON details
+    const parsedLogs = logs.map(log => ({
+      ...log,
+      details: log.details ? JSON.parse(log.details) : null
+    }));
+
+    res.json({
+      ok: true,
+      logs: parsedLogs,
+      pagination: {
+        page,
+        limit,
+        total: countResult.total,
+        pages: Math.ceil(countResult.total / limit)
+      }
+    });
+  } catch (e) {
+    console.error("Get security logs error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get flagged/blocked IPs
+router.get("/api/vouchers/security/blocked-ips", requireAdmin, async (req, res) => {
+  try {
+    const [flaggedIps] = await portalDB.query(
+      `SELECT * FROM flagged_ips ORDER BY flagged_at DESC`
+    );
+    res.json({ ok: true, flaggedIps });
+  } catch (e) {
+    console.error("Get blocked IPs error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Unblock an IP address
+router.delete("/api/vouchers/security/blocked-ips/:ip", requireAdmin, async (req, res) => {
+  try {
+    const ip = req.params.ip;
+    const result = await voucherSecurity.unblockIp(ip);
+    res.json(result);
+  } catch (e) {
+    console.error("Unblock IP error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Manually block an IP
+router.post("/api/vouchers/security/block-ip", requireAdmin, async (req, res) => {
+  try {
+    const { ip, reason, duration } = req.body;
+    if (!ip) {
+      return res.status(400).json({ ok: false, message: "IP address required" });
+    }
+    await voucherSecurity.flagIpAddress(ip, reason || "Manually blocked by admin", duration || 60);
+    res.json({ ok: true, message: `IP ${ip} has been blocked` });
+  } catch (e) {
+    console.error("Block IP error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Get voucher usage history
+router.get("/api/vouchers/security/usage", requireAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const offset = (page - 1) * limit;
+
+    const [[countResult]] = await portalDB.query(
+      `SELECT COUNT(*) as total FROM voucher_usage`
+    );
+
+    const [usage] = await portalDB.query(
+      `SELECT vu.*, p.name as plan_name
+       FROM voucher_usage vu
+       LEFT JOIN vouchers v ON vu.voucher_code = v.code
+       LEFT JOIN plans p ON v.plan_id = p.id
+       ORDER BY vu.used_at DESC
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
+    );
+
+    res.json({
+      ok: true,
+      usage,
+      pagination: {
+        page,
+        limit,
+        total: countResult.total,
+        pages: Math.ceil(countResult.total / limit)
+      }
+    });
+  } catch (e) {
+    console.error("Get voucher usage error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Check specific voucher security status
+router.get("/api/vouchers/:id/security", requireAdmin, async (req, res) => {
+  try {
+    const [[voucher]] = await portalDB.query(
+      `SELECT code FROM vouchers WHERE id = ?`,
+      [req.params.id]
+    );
+
+    if (!voucher) {
+      return res.status(404).json({ ok: false, message: "Voucher not found" });
+    }
+
+    const usageCheck = await voucherSecurity.checkVoucherUsed(voucher.code);
+    const sessionCheck = await voucherSecurity.hasActiveSession(voucher.code);
+
+    // Get security logs for this voucher
+    const [logs] = await portalDB.query(
+      `SELECT event_type, ip_address, severity, details, created_at
+       FROM voucher_security_logs
+       WHERE voucher_code = ?
+       ORDER BY created_at DESC
+       LIMIT 20`,
+      [voucher.code]
+    );
+
+    res.json({
+      ok: true,
+      security: {
+        used: usageCheck.used,
+        usedAt: usageCheck.usedAt,
+        sessionCount: usageCheck.sessionCount || 0,
+        hasActiveSession: sessionCheck.active,
+        activeSession: sessionCheck.active ? sessionCheck : null,
+        recentLogs: logs.map(l => ({
+          ...l,
+          details: l.details ? JSON.parse(l.details) : null
+        }))
+      }
+    });
+  } catch (e) {
+    console.error("Get voucher security error:", e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// Clean up old security logs (SUPER_ADMIN only)
+router.post("/api/vouchers/security/cleanup", requireAdmin, async (req, res) => {
+  try {
+    if (req.session.admin.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ ok: false, message: "Super Admin required" });
+    }
+
+    const daysToKeep = parseInt(req.body.days) || 30;
+    const result = await voucherSecurity.cleanupOldLogs(daysToKeep);
+    res.json({ ok: true, message: `Cleaned up ${result.deletedCount} old log entries` });
+  } catch (e) {
+    console.error("Cleanup logs error:", e);
     res.status(500).json({ ok: false, message: e.message });
   }
 });
