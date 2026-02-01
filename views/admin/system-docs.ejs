@@ -21,6 +21,7 @@
           <button class="docs-tab" onclick="showSection('security')">Security</button>
           <button class="docs-tab" onclick="showSection('payments')">Payments</button>
           <button class="docs-tab" onclick="showSection('devices')">Devices</button>
+          <button class="docs-tab" onclick="showSection('sessions')">Sessions</button>
           <button class="docs-tab" onclick="showSection('radius')">RADIUS</button>
           <button class="docs-tab" onclick="showSection('api')">API Reference</button>
         </div>
@@ -455,6 +456,113 @@
           </div>
         </div>
 
+        <!-- Sessions Section -->
+        <div class="docs-section" id="section-sessions">
+          <div class="card">
+            <div class="card-head">
+              <h3>Sessions & Data Usage</h3>
+            </div>
+            <div class="card-body docs-content">
+              <h4>Overview</h4>
+              <p>The Sessions page provides real-time visibility into WiFi usage across your hotspot network. It tracks active connections, data consumption, and session history through RADIUS accounting data.</p>
+
+              <h4>Features</h4>
+              <ul>
+                <li><strong>Active Sessions:</strong> View currently connected users with live data usage</li>
+                <li><strong>Top Users:</strong> See which users consume the most bandwidth</li>
+                <li><strong>Session History:</strong> Browse historical session data with filtering</li>
+                <li><strong>User Disconnect:</strong> Terminate active sessions via RADIUS CoA</li>
+                <li><strong>CSV Export:</strong> Export session data for analysis</li>
+              </ul>
+
+              <h4>Data Source</h4>
+              <p>All session data comes from the FreeRADIUS <code>radacct</code> (accounting) table:</p>
+              <div class="docs-code-block">
+                <pre>
+radacct table fields used:
+- username: Voucher code used for authentication
+- acctstarttime: When session started
+- acctstoptime: When session ended (NULL if active)
+- acctinputoctets: Bytes downloaded by user
+- acctoutputoctets: Bytes uploaded by user
+- acctsessiontime: Total session duration in seconds
+- framedipaddress: IP assigned to user
+- callingstationid: Device MAC address
+- nasipaddress: Router/NAS IP
+                </pre>
+              </div>
+
+              <h4>Dashboard Metrics</h4>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>Description</th>
+                    <th>Calculation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Active Sessions</td>
+                    <td>Currently connected users</td>
+                    <td>WHERE acctstoptime IS NULL</td>
+                  </tr>
+                  <tr>
+                    <td>Today's Sessions</td>
+                    <td>Total sessions started today</td>
+                    <td>WHERE acctstarttime >= today</td>
+                  </tr>
+                  <tr>
+                    <td>Today's Download</td>
+                    <td>Total data downloaded today</td>
+                    <td>SUM(acctinputoctets) for today</td>
+                  </tr>
+                  <tr>
+                    <td>Today's Upload</td>
+                    <td>Total data uploaded today</td>
+                    <td>SUM(acctoutputoctets) for today</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <h4>User Details Modal</h4>
+              <p>Click any user to see detailed information:</p>
+              <ul>
+                <li><strong>Total Usage:</strong> All-time download/upload totals</li>
+                <li><strong>Session Count:</strong> Number of sessions created</li>
+                <li><strong>Daily Usage Chart:</strong> Last 7 days of data usage</li>
+                <li><strong>Recent Sessions:</strong> List of recent session details</li>
+                <li><strong>Devices Used:</strong> MAC addresses seen for this user</li>
+              </ul>
+
+              <h4>User Disconnect</h4>
+              <p>Administrators can disconnect active sessions using RADIUS Change of Authorization (CoA):</p>
+              <div class="docs-code-block">
+                <pre>
+Disconnect Flow:
+1. Admin clicks "Disconnect" button
+2. System sends CoA request to NAS (router)
+3. NAS terminates the user's session
+4. Session record is closed in radacct
+
+CoA Packet:
+- Acct-Session-Id: Session identifier
+- User-Name: Username to disconnect
+- NAS-IP-Address: Router IP
+                </pre>
+              </div>
+
+              <h4>Export Format</h4>
+              <p>CSV export includes the following columns:</p>
+              <ul>
+                <li>Username, Start Time, Stop Time, Duration</li>
+                <li>Download (bytes), Upload (bytes), Total (bytes)</li>
+                <li>IP Address, MAC Address, NAS IP</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         <!-- RADIUS Section -->
         <div class="docs-section" id="section-radius">
           <div class="card">
@@ -675,6 +783,18 @@ Content-Type: application/json
                       <code>GET /admin/api/finance/withdrawals</code>
                     </td>
                   </tr>
+                  <tr>
+                    <td>Sessions</td>
+                    <td>
+                      <code>GET /admin/api/usage/summary</code><br>
+                      <code>GET /admin/api/usage/active-sessions</code><br>
+                      <code>GET /admin/api/usage/history</code><br>
+                      <code>GET /admin/api/usage/top-users</code><br>
+                      <code>GET /admin/api/usage/user/:username</code><br>
+                      <code>POST /admin/api/usage/disconnect/:username</code><br>
+                      <code>GET /admin/api/usage/export</code>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -687,6 +807,16 @@ Content-Type: application/json
             <h3>Version History</h3>
           </div>
           <div class="card-body docs-content">
+            <div class="version-entry">
+              <strong>v1.6.0</strong> - <span class="muted">January 2026</span>
+              <ul>
+                <li>Added Sessions page for real-time usage monitoring</li>
+                <li>Implemented data usage tracking from RADIUS accounting</li>
+                <li>Added top users and session history views</li>
+                <li>Added user disconnect via RADIUS CoA</li>
+                <li>Added session data CSV export</li>
+              </ul>
+            </div>
             <div class="version-entry">
               <strong>v1.5.0</strong> - <span class="muted">January 2026</span>
               <ul>
